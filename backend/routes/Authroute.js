@@ -11,7 +11,7 @@ import {
 } from "../controllers/Authcontroller.js";
 
 // ✅ import protect middleware
-import  protect  from "../middleware/protect.js";  
+import  protect  from "../Middleware/protect.js";  
 
 const router = express.Router();
 
