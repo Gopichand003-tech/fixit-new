@@ -6,7 +6,7 @@ import Provider from "../models/Provider.js";
 
 const router = express.Router();
 
-// Multer storage
+// Multer storage configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = "uploads/providers";
@@ -20,7 +20,36 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// ✅ Create provider
+// ------------------ Routes ------------------
+
+// 1️⃣ Search providers (must be before /:id)
+router.get("/search", async (req, res) => {
+  try {
+    const { location, service } = req.query;
+    const filter = {};
+    if (location) filter.location = { $regex: location, $options: "i" };
+    if (service) filter.service = { $regex: service, $options: "i" };
+
+    const providers = await Provider.find(filter);
+    res.json(providers);
+  } catch (err) {
+    console.error("Error searching providers:", err);
+    res.status(500).json({ message: "Failed to search providers" });
+  }
+});
+
+// 2️⃣ Get all providers
+router.get("/", async (req, res) => {
+  try {
+    const providers = await Provider.find();
+    res.json(providers);
+  } catch (err) {
+    console.error("Error fetching providers:", err);
+    res.status(500).json({ message: "Failed to fetch providers" });
+  }
+});
+
+// 3️⃣ Create provider
 router.post(
   "/",
   upload.fields([
@@ -53,34 +82,7 @@ router.post(
   }
 );
 
-// ✅ Search providers (must be before /:id)
-router.get("/search", async (req, res) => {
-  try {
-    const { location, service } = req.query;
-    const filter = {};
-    if (location) filter.location = { $regex: location, $options: "i" };
-    if (service) filter.service = { $regex: service, $options: "i" };
-
-    const providers = await Provider.find(filter);
-    res.json(providers);
-  } catch (err) {
-    console.error("Error searching providers:", err);
-    res.status(500).json({ message: "Failed to search providers" });
-  }
-});
-
-// ✅ Get all providers
-router.get("/", async (req, res) => {
-  try {
-    const providers = await Provider.find();
-    res.json(providers);
-  } catch (err) {
-    console.error("Error fetching providers:", err);
-    res.status(500).json({ message: "Failed to fetch providers" });
-  }
-});
-
-// ✅ Get single provider by ID
+// 4️⃣ Get single provider by ID (dynamic route must be after fixed routes)
 router.get("/:id", async (req, res) => {
   try {
     const provider = await Provider.findById(req.params.id);
@@ -91,7 +93,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ✅ Update membership
+// 5️⃣ Update membership
 router.patch("/:id/membership", async (req, res) => {
   try {
     const { membershipPaid } = req.body;
@@ -107,7 +109,7 @@ router.patch("/:id/membership", async (req, res) => {
   }
 });
 
-// ✅ Delete provider (admin only)
+// 6️⃣ Delete provider (admin only)
 router.delete("/:id", async (req, res) => {
   try {
     const isAdmin = req.headers["x-admin-secret"] === process.env.ADMIN_SECRET;
