@@ -75,10 +75,10 @@ useEffect(() => {
     };
 
     try {
-      await axios.post("http://localhost:5000/api/bookings", bookingData);
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/bookings`, bookingData);
 
       try {
-        await axios.post("http://localhost:5000/api/notifications", {
+        await axios.post(`${import.meta.env.VITE_API_URL}/api/notifications`, {
           workerId: worker._id || worker.id,
           message: `New booking from ${userName} for ${selectedIssue.label} at ${timeSlot}`,
         });

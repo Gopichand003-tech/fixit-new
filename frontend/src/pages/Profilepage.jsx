@@ -14,7 +14,7 @@ const ProfilePicUpload = () => {
 
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/users/upload-profile",
+        `${import.meta.env.VITE_API_URL}/api/users/upload-profile`,
         formData,
         { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
       );

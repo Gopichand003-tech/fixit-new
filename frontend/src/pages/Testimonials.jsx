@@ -18,7 +18,7 @@ const TestimonialsCRUD = () => {
 
   const fetchTestimonials = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/testimonials");
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/testimonials`);
       setTestimonials(res.data);
     } catch (err) {
       console.error("Error fetching testimonials", err);
@@ -31,12 +31,12 @@ const TestimonialsCRUD = () => {
     try {
       if (editingId) {
         await axios.put(
-          `http://localhost:5000/api/testimonials/${editingId}`,
+          `${import.meta.env.VITE_API_URL}/api/testimonials/${editingId}`,
           form,
           { headers: { Authorization: `Bearer ${token}` } }
         );
       } else {
-        await axios.post("http://localhost:5000/api/testimonials", form, {
+        await axios.post(`${import.meta.env.VITE_API_URL}/api/testimonials`, form, {
           headers: { Authorization: `Bearer ${token}` },
         });
       }
@@ -56,7 +56,7 @@ const TestimonialsCRUD = () => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`http://localhost:5000/api/testimonials/${id}`, {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/api/testimonials/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchTestimonials();
@@ -144,7 +144,7 @@ const TestimonialsCRUD = () => {
       src={
         t.user.profilePic.startsWith("http")
           ? t.user.profilePic
-          : `http://localhost:5000${t.user.profilePic}`
+          : `${import.meta.env.VITE_API_URL}${t.user.profilePic}`
       }
       alt={t.user?.name || "User"}
       className="w-14 h-14 rounded-full object-cover border-2 border-indigo-400 shadow"
