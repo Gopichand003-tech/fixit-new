@@ -36,7 +36,7 @@ export default function LoginRegister() {
         : { email: formData.email, password: formData.password };
 
       const response = await axios.post(
-        `http://localhost:5000/api/auth${endpoint}`,
+        `${import.meta.env.VITE_API_URL}/api/auth${endpoint}`,
         payload
       );
 
@@ -60,7 +60,7 @@ export default function LoginRegister() {
   // Google login
   const handleGoogleLogin = async (credentialResponse) => {
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/google", {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/google`, {
         token: credentialResponse.credential,
       });
 
@@ -87,7 +87,7 @@ export default function LoginRegister() {
     }
     setLoadingForgot(true);
     try {
-     await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/forgot-password`, { email: forgotEmail });
+     await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/forgot-password`, { email: forgotEmail });
 
       toast.success("OTP sent to your email");
       setForgotModalOpen(false);
@@ -108,7 +108,7 @@ export default function LoginRegister() {
     }
     setLoadingReset(true);
     try {
-      await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/new-password`, {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/new-password`, {
         email: forgotEmail,
         otp,
         newPassword,
