@@ -1,6 +1,6 @@
 import express from "express";
 import Testimonial from "../models/Testimonial.js";
-import { protect } from "../Middleware/authMiddleware.js"; // middleware that adds req.user
+import  protect  from "../Middleware/authMiddleware.js"; // middleware that adds req.user
 
 const router = express.Router();
 
