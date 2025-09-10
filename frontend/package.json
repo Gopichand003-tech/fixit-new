@@ -5,8 +5,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+  "build": "npx vite build",
+  "preview": "npx vite preview"
   },
   "keywords": [],
   "author": "",
