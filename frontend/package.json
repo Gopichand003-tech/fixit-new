@@ -4,9 +4,10 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "vite",
-  "build": "npx vite build",
-  "preview": "npx vite preview"
+  "dev": "vite",
+  "build": "node --no-warnings ./node_modules/vite/bin/vite.js build",
+  "preview": "node ./node_modules/vite/bin/vite.js preview"
+
   },
   "keywords": [],
   "author": "",
