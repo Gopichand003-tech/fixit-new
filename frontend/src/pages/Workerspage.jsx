@@ -38,6 +38,7 @@ import {
   EyeClosed,
   CameraIcon,
   Timer,
+  BriefcaseBusiness,
 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -87,6 +88,8 @@ const WorkersPage = () => {
     Photography: <CameraIcon className="w-6 h-6 text-indigo-600" />,
     Catering: <UtensilsCrossed className="w-6 h-6 text-orange-600" />,
     MusicTeacher: <Music className="w-6 h-6 text-pink-600" />,
+     BusinessConsulting: <BriefcaseBusiness className="w-6 h-6 text-blue-600" />,
+
     Default: <Briefcase className="w-6 h-6 text-gray-600" />,
   };
 
