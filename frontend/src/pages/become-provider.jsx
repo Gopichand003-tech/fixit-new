@@ -118,7 +118,7 @@ const submitDocuments = async () => {
   if (formData.documents.pancard) data.append("pancard", formData.documents.pancard);
 
   try {
-    await axios.post(`${process.env.REACT_APP_API_URL}/api/providers`, data, {
+    await axios.post(`${process.env.VITE_API_URL}/api/providers`, data, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     setStep(6);
