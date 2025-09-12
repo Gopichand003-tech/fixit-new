@@ -61,6 +61,9 @@ export default function BecomeProvider() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  
+const API = import.meta.env.VITE_API_URL || VITE_API_URI;
+
   const [formData, setFormData] = useState({
   name: "",
   service: "",
@@ -80,7 +83,7 @@ export default function BecomeProvider() {
     if (!formData.phone) return alert("Enter phone number");
     setLoading(true);
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/otp/send-otp`, { phone: formData.phone });
+      await axios.post(`${API}/api/otp/send-otp`, { phone: formData.phone });
       alert("OTP sent!");
     } catch (err) {
       alert(err.response?.data?.message || "Failed to send OTP");
@@ -91,7 +94,7 @@ export default function BecomeProvider() {
     if (!formData.otp) return alert("Enter OTP");
     setLoading(true);
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/otp/verify-otp`, { phone: formData.phone, otp: formData.otp });
+      await axios.post(`${API}/api/otp/verify-otp`, { phone: formData.phone, otp: formData.otp });
       alert("OTP verified!");
       setStep(5);
     } catch (err) {
@@ -115,7 +118,7 @@ const submitDocuments = async () => {
   if (formData.documents.pancard) data.append("pancard", formData.documents.pancard);
 
   try {
-    await axios.post(`${import.meta.env.VITE_API_URL}/api/providers`, data, {
+    await axios.post(`${process.env.REACT_APP_API_URL}/api/providers`, data, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     setStep(6);

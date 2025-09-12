@@ -5,7 +5,8 @@ import dotenv from "dotenv";
 dotenv.config();
 const router = express.Router();
 
-const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH);
+
 
 // Temporary in-memory OTP store
 const otpStore = {};
@@ -42,7 +43,13 @@ router.post("/send-otp", async (req, res) => {
     console.log("OTP sent:", otp);
     res.json({ success: true, message: "OTP sent successfully" });
   } catch (err) {
-    console.error("Error sending OTP:", err.message);
+    console.error("Error sending OTP:", {
+  code: err.code,
+  message: err.message,
+  moreInfo: err.moreInfo,
+  stack: err.stack
+});
+
     res.status(500).json({ message: "Failed to send OTP" });
   }
 });
