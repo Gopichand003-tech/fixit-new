@@ -50,7 +50,7 @@ const services = [
   { icon: Music, name: "MusicTeacher", count: "40+ providers", category: "Creative", color: "from-fuchsia-500 to-fuchsia-600" },
   { icon: BookOpen, name: "Tutoring", count: "65+ providers", category: "Creative", color: "from-sky-500 to-sky-600" },
   { icon: ShoppingBag, name: "Personal Shopper", count: "33+ providers", category: "Creative", color: "from-violet-500 to-violet-600" },
-  { icon: Briefcase, name: "Business Consulting", count: "28+ providers", category: "Tech", color: "from-stone-500 to-stone-600" },
+  { icon: Briefcase, name: "BusinessConsulting", count: "28+ providers", category: "Tech", color: "from-stone-500 to-stone-600" },
   { icon: Heart, name: "Healthcare", count: "59+ providers", category: "Home", color: "from-red-400 to-red-500" },
   { icon: Baby, name: "Babysitting", count: "38+ providers", category: "Home", color: "from-pink-400 to-pink-500" },
   { icon: PawPrint, name: "Pet Care", count: "45+ providers", category: "Outdoor", color: "from-amber-500 to-amber-600" },

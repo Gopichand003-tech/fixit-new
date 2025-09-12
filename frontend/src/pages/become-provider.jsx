@@ -22,7 +22,7 @@ const SERVICES = [
   "MusicTeacher",
   "Tutoring",
   "Personal Shopper",
-  "Business Consulting",
+  "BusinessConsulting",
   "Healthcare",
   "Babysitting",
   "Pet Care",
