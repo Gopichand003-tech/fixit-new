@@ -1,11 +1,15 @@
+// Middleware: authMiddleware.js
 import jwt from "jsonwebtoken";
-import User from "../models/user.js"; // adjust path if needed
+import User from "../models/user.js";
 
 const protect = async (req, res, next) => {
-  let token;
+  try {
+    let token;
 
-  if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
-    try {
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer")
+    ) {
       token = req.headers.authorization.split(" ")[1];
 
       // Verify token
@@ -18,14 +22,15 @@ const protect = async (req, res, next) => {
         return res.status(401).json({ message: "User not found" });
       }
 
-      next();
-    } catch (err) {
-      return res.status(401).json({ message: "Not authorized, token failed" });
+      next(); // ✅ token valid, allow route access
+      return;
     }
-  }
 
-  if (!token) {
+    // No token provided
     return res.status(401).json({ message: "Not authorized, no token" });
+  } catch (err) {
+    console.error("Auth middleware error:", err.message);
+    return res.status(401).json({ message: "Not authorized, token failed" });
   }
 };
 
