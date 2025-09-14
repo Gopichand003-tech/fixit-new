@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -17,87 +17,116 @@ import {
 } from "lucide-react";
 
 const ConfirmationPage = () => {
-  const { state } = useLocation();
+  const { id } = useParams();
   const navigate = useNavigate();
+  const [booking, setBooking] = useState(null);
+
+  const token = localStorage.getItem("token");
+
+  const fetchBooking = async () => {
+    try {
+      const { data } = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/bookings/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      setBooking(data);
+    } catch (error) {
+      console.error("Error fetching booking:", error);
+    }
+  };
 
   useEffect(() => {
-    if (state) {
-      // Send booking to backend
-      const sendBooking = async () => {
-        try {
-          await axios.post("/api/bookings", {
-            workerId: state.worker?._id,
-            userName: state.userName,
-            userPhone: state.userPhone,
-            userAddress: state.userAddress,
-            issue: state.issue,
-            price: state.price,
-            timeSlot: state.timeSlot,
-          });
-          console.log("Booking saved successfully!");
-        } catch (error) {
-          console.error("Error saving booking:", error);
-        }
-      };
+    fetchBooking();
+    const interval = setInterval(fetchBooking, 5000); // Poll every 5s
+    return () => clearInterval(interval);
+  }, [id]);
 
-      sendBooking();
-    }
-  }, [state]);
+  if (!booking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-600">Loading booking details...</p>
+      </div>
+    );
+  }
 
+  // Status color
+  const statusColor = {
+    pending: "text-yellow-500",
+    confirmed: "text-green-500",
+    rejected: "text-red-500",
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-green-100 via-teal-100 to-green-100 flex justify-center items-center p-6">
       <Card className="max-w-2xl w-full shadow-2xl rounded-2xl bg-white border border-gray-200">
         <CardContent className="space-y-8 p-8">
-          {/* Success Message */}
+          {/* Status Section */}
           <div className="text-center">
             <FileCheck className="w-16 h-16 text-green-500 mx-auto animate-bounce" />
-            <h2 className="text-3xl font-bold text-gray-800 mt-4">
-                <PartyPopper className="w-10  h-10 inline mr-2 text-purple-600" /> Booking Confirmed!
+            <h2
+              className={`text-3xl font-bold mt-4 flex items-center justify-center gap-2 ${statusColor[booking.status]}`}
+            >
+              <PartyPopper className="w-10 h-10 text-purple-600" />
+              {booking.status === "pending" && "Booking Pending..."}
+              {booking.status === "confirmed" && "Booking Confirmed!"}
+              {booking.status === "rejected" && "Booking Rejected"}
             </h2>
             <p className="text-gray-600 mt-2">
               Thank you,{" "}
               <span className="font-semibold text-teal-600">
-                {state.userName}
+                {booking.userName}
               </span>
-              ! Your service has been booked successfully.
+              !
+              {booking.status === "pending" &&
+                " Your request is waiting for provider confirmation."}
+              {booking.status === "confirmed" &&
+                " Your service has been booked successfully."}
+              {booking.status === "rejected" &&
+                " Unfortunately, the provider has rejected your booking."}
             </p>
           </div>
 
-         {/* Worker Info */}
-<div className="bg-gray-50 rounded-xl p-5 shadow-sm">
-  <h3 className="text-lg font-semibold text-gray-700 mb-3">
-    <GhostIcon className="w-4 h-4 inline mr-2 text-teal-800" /> Worker Details
-  </h3>
-  <div className="flex flex-col gap-2 text-gray-600">
-    <p>
-      <User className="w-4 h-4 inline mr-2 text-teal-800" />{" "}
-      {state.worker?.name}
-    </p>
-    <p>
-      <MapPin className="w-4 h-4 inline mr-2 text-teal-800" />{" "}
-      {state.worker?.location}
-    </p>
-  </div>
-</div>
-
+          {/* Worker Info */}
+          <div className="bg-gray-50 rounded-xl p-5 shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-700 mb-3">
+              <GhostIcon className="w-4 h-4 inline mr-2 text-teal-800" /> Worker
+              Details
+            </h3>
+            <div className="flex flex-col gap-2 text-gray-600">
+              <p>
+                <User className="w-4 h-4 inline mr-2 text-teal-800" />{" "}
+                {booking.workerName}
+              </p>
+              {booking.worker?.location && (
+                <p>
+                  <MapPin className="w-4 h-4 inline mr-2 text-teal-800" />{" "}
+                  {booking.worker.location}
+                </p>
+              )}
+            </div>
+          </div>
 
           {/* Service Details */}
           <div className="bg-teal-50 rounded-xl p-5 border border-teal-200 shadow-sm">
             <h3 className="text-lg font-semibold text-gray-700 mb-3">
-                <ToolCase className="w-6 h-6 inline mr-2 text-teal-600" /> Service Details
+              <ToolCase className="w-6 h-6 inline mr-2 text-teal-600" /> Service
+              Details
             </h3>
             <div className="flex items-center justify-between text-gray-700">
-              <span>{state.issue}</span>
+              <span>{booking.issue}</span>
               <span className="flex items-center gap-1 font-semibold">
-                <IndianRupee className="w-4 h-4 text-teal-600" /> {state.price}
+                <IndianRupee className="w-4 h-4 text-teal-600" /> {booking.price}
               </span>
             </div>
             <hr className="my-3 border-teal-200" />
             <div className="flex items-center justify-between font-bold text-gray-800 text-lg">
               <span>Total Amount</span>
               <span className="flex items-center gap-1 text-teal-700">
-                <IndianRupee className="w-5 h-5" /> {state.price}
+                <IndianRupee className="w-5 h-5" /> {booking.price}
               </span>
             </div>
           </div>
@@ -110,19 +139,19 @@ const ConfirmationPage = () => {
             <div className="flex flex-col gap-2 text-gray-600">
               <p>
                 <User className="w-4 h-4 inline mr-2 text-teal-600" />{" "}
-                {state.userName}
+                {booking.userName}
               </p>
               <p>
                 <Phone className="w-4 h-4 inline mr-2 text-teal-600" />{" "}
-                {state.userPhone}
+                {booking.userPhone}
               </p>
               <p>
                 <Home className="w-4 h-4 inline mr-2 text-teal-600" />{" "}
-                {state.userAddress}
+                {booking.userAddress}
               </p>
               <p>
                 <Clock className="w-4 h-4 inline mr-2 text-teal-600" />{" "}
-                {state.timeSlot}
+                {booking.timeSlot}
               </p>
             </div>
           </div>
