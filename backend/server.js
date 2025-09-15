@@ -14,10 +14,9 @@ import bookingsRoutes from "./routes/bookings.js";
 import notificationsRoutes from "./routes/notifications.js";
 import tasksRoute from "./routes/tasks.js"; // WhatsApp tasks
 
-// ✅ Only load .env locally
-if (process.env.NODE_ENV !== "production") {
+
   dotenv.config();
-}
+
 const app = express();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -28,8 +27,8 @@ app.use(express.json());
 app.use(
   cors({
     origin: [
-      process.env.VITE_API_URL,
-      process.env.VITE_API_URI,          // ✅ use .env for production frontend
+      "https://fixit-backend1.onrender.com",
+      "http://localhost:5000"       // ✅ use .env for production frontend
     ],
     credentials: true,
   })
