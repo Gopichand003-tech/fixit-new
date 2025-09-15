@@ -14,7 +14,10 @@ import bookingsRoutes from "./routes/bookings.js";
 import notificationsRoutes from "./routes/notifications.js";
 import tasksRoute from "./routes/tasks.js"; // WhatsApp tasks
 
-dotenv.config();
+// ✅ Only load .env locally
+if (process.env.NODE_ENV !== "production") {
+  dotenv.config();
+}
 const app = express();
 
 const __filename = fileURLToPath(import.meta.url);
