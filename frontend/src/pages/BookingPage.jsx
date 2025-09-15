@@ -17,8 +17,8 @@ import {
   Timer,
 } from "lucide-react";
 
-// ✅ Import WhatsApp sender
-import { sendWhatsapp } from "../utils/sendWhatsapp";
+// ❌ REMOVED Twilio frontend import
+// import { sendWhatsapp } from "../utils/sendWhatsapp";
 
 // Helper: Phone validation (10-digit India)
 const isValidPhone = (phone) => /^[6-9]\d{9}$/.test(phone);
@@ -95,16 +95,19 @@ const BookingPage = () => {
         { headers: getAuthHeaders() }
       );
 
-      // 2️⃣ Send WhatsApp notification to worker
+      // 2️⃣ ✅ Ask backend to send WhatsApp notification
       try {
         const workerNumber = worker.phone?.startsWith("+91")
           ? worker.phone
           : `+91${worker.phone}`;
         const message = `Hi ${worker.name}, you have a new booking from ${userName} for ${selectedIssue.label} at ${timeSlot}. Please confirm.`;
-        await sendWhatsapp(workerNumber, message);
-        console.log("✅ WhatsApp notification sent to worker");
+        await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/tasks/send-whatsapp`,
+          { workerNumber, taskMessage: message }
+        );
+        console.log("✅ WhatsApp notification request sent to backend");
       } catch (err) {
-        console.warn("⚠️ WhatsApp notification failed:", err);
+        console.warn("⚠️ WhatsApp notification failed:", err?.response?.data || err);
       }
 
       // 3️⃣ Optional: in-app notification
@@ -142,7 +145,7 @@ const BookingPage = () => {
     userAddress.trim() &&
     selectedIssue &&
     timeSlot;
-
+    
   return (
     <div className="min-h-screen bg-gradient-to-r from-green-100 via-teal-50 to-green-100 p-6 flex justify-center items-center">
       <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-8">

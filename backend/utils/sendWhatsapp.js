@@ -1,27 +1,33 @@
-// backend/utils/sendWhatsapp.js
-import twilio from 'twilio';
-import dotenv from 'dotenv';
+// utils/sendWhatsapp.js
+import Twilio from "twilio";
 
-dotenv.config();
-
-const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH);
+const client = new Twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH);
 
 /**
- * Send WhatsApp message to a worker
- * @param {string} workerNumber - e.g. "+91XXXXXXXXXX"
- * @param {string} taskMessage - message to send
+ * Send a WhatsApp message using Twilio
+ * @param {string} to - Full number with country code, e.g., "+91XXXXXXXXXX"
+ * @param {string} message - Message body
  */
-export const sendWhatsapp = async (workerNumber, taskMessage) => {
-  if (!workerNumber || !taskMessage) {
-    throw new Error("Missing workerNumber or taskMessage");
+export const sendWhatsapp = async (to, message) => {
+  if (!to || !message) throw new Error("Missing 'to' number or 'message'");
+
+  // ✅ Validate number format (+countrycode + digits)
+  if (!/^\+\d{10,15}$/.test(to)) {
+    throw new Error("Invalid phone number format (must include country code, e.g. +91XXXXXXXXXX)");
   }
 
-  // Worker must have joined the Twilio Sandbox first
-  const formattedNumber = `whatsapp:${workerNumber}`;
+  try {
+    const res = await client.messages.create({
+      from: `whatsapp:${process.env.TWILIO_PHONE_NUMBER}`,
+      to: `whatsapp:${to}`,
+      body: message,
+    });
 
-  return await client.messages.create({
-    from: 'whatsapp:+14155238886', // Twilio sandbox number
-    to: formattedNumber,
-    body: taskMessage,
-  });
+    console.log(`✅ WhatsApp sent to ${to}:`, res.sid);
+    return res;
+  } catch (err) {
+    console.error("❌ Twilio send error:", err?.message || err);
+    // Provide more descriptive error upstream
+    throw new Error(err?.message || "Twilio failed to send WhatsApp message");
+  }
 };
