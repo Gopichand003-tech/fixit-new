@@ -28,11 +28,13 @@ app.use(
   cors({
     origin: [
       "https://fixit-backend1.onrender.com",
-      "http://localhost:5000"       // ✅ use .env for production frontend
+      "http://localhost:5000",
+      "http://localhost:5173"  // add this for dev frontend
     ],
     credentials: true,
   })
 );
+
 
 // ---------- MongoDB ----------
 mongoose
