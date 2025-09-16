@@ -17,16 +17,27 @@ import {
   Timer,
 } from "lucide-react";
 
-// ❌ REMOVED Twilio frontend import
-// import { sendWhatsapp } from "../utils/sendWhatsapp";
-
 // Helper: Phone validation (10-digit India)
 const isValidPhone = (phone) => /^[6-9]\d{9}$/.test(phone);
 
-// Centralized auth headers
+// Helper: Centralized auth headers
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+// Helper: Decode JWT and return userId
+const getUserIdFromToken = () => {
+  const token = localStorage.getItem("token");
+  if (!token) return null;
+
+  try {
+    const decoded = JSON.parse(atob(token.split(".")[1]));
+    return decoded.id || decoded._id || decoded.userId || decoded.sub || null;
+  } catch (err) {
+    console.error("JWT decode error:", err);
+    return null;
+  }
 };
 
 const BookingPage = () => {
@@ -60,105 +71,103 @@ const BookingPage = () => {
   const issues = issuesData[professionKey] || [];
 
   const handleBooking = async () => {
-  // 1️⃣ Basic validation
-  if (!selectedIssue || !userName || !userPhone || !userAddress || !timeSlot) {
-    toast.error("⚠️ Please fill all fields before booking.");
-    return;
-  }
-
-  if (!isValidPhone(userPhone)) {
-    toast.error("⚠️ Please enter a valid 10-digit phone number.");
-    return;
-  }
-
-  const token = localStorage.getItem("token");
-  if (!token) {
-    toast.error("❌ You must be logged in to book a service.");
-    return;
-  }
-
-  // 2️⃣ Decode token to get userId
-  let userId;
-  try {
-    const decoded = JSON.parse(atob(token.split(".")[1])); // simple JWT decode
-    userId = decoded.id || decoded._id;
-    if (!userId) throw new Error("User ID not found in token");
-  } catch (err) {
-    toast.error("❌ Unable to identify user. Please login again.");
-    localStorage.removeItem("token");
-    navigate("/login");
-    return;
-  }
-
-  // 3️⃣ Build booking payload
-  const bookingData = {
-    workerId: worker._id,
-    workerName: worker.name,
-    issue: selectedIssue.label,
-    price: Number(selectedIssue.price),
-    userId,
-    userName,
-    userPhone,
-    userAddress,
-    timeSlot,
-  };
-
-  console.log("Booking payload:", bookingData); // ✅ debug
-
-  try {
-    // 4️⃣ Save booking
-    const { data } = await axios.post(
-      `${import.meta.env.VITE_API_URL}/api/bookings`,
-      bookingData,
-      { headers: getAuthHeaders() }
-    );
-
-    // 5️⃣ WhatsApp notification
-    try {
-      const workerNumber = worker.phone?.startsWith("+91")
-        ? worker.phone
-        : `+91${worker.phone}`;
-      const message = `Hi ${worker.name}, you have a new booking from ${userName} for ${selectedIssue.label} at ${timeSlot}. Please confirm.`;
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/tasks/send-whatsapp`, {
-        workerNumber,
-        taskMessage: message,
-      });
-      console.log("✅ WhatsApp notification sent");
-    } catch (err) {
-      console.warn("⚠️ WhatsApp notification failed:", err?.response?.data || err);
+    // 1️⃣ Basic validation
+    if (!selectedIssue || !userName || !userPhone || !userAddress || !timeSlot) {
+      toast.error("⚠️ Please fill all fields before booking.");
+      return;
     }
 
-    // 6️⃣ In-app notification
-    try {
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/notifications`,
-        {
-          workerId: worker._id,
-          message: `New booking from ${userName} for ${selectedIssue.label} at ${timeSlot}`,
-        },
-        { headers: getAuthHeaders() }
-      );
-    } catch (err) {
-      console.warn("⚠️ Notification failed", err);
+    if (!isValidPhone(userPhone)) {
+      toast.error("⚠️ Please enter a valid 10-digit phone number.");
+      return;
     }
 
-    // 7️⃣ Success
-    toast.success("✅ Booking request submitted! Waiting for provider confirmation.");
-    navigate(`/confirmation/${data.booking._id}`);
-  } catch (err) {
-    console.error("Booking error:", err.response || err);
-    if (err.response?.status === 401 || err.response?.status === 403) {
-      toast.error("❌ Token invalid or expired. Please login again.");
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("❌ You must be logged in to book a service.");
+      navigate("/login");
+      return;
+    }
+
+    // 2️⃣ Decode token to get userId
+    const userId = getUserIdFromToken();
+    if (!userId) {
+      toast.error("❌ Unable to identify user. Please login again.");
       localStorage.removeItem("token");
       navigate("/login");
-    } else if (err.response?.status === 400) {
-      toast.error("❌ Booking failed. Invalid request data.");
-    } else {
-      toast.error("❌ Booking failed. Please try again later.");
+      return;
     }
-  }
-};
 
+    // 3️⃣ Build booking payload
+    const bookingData = {
+      workerId: worker._id,
+      workerName: worker.name,
+      workerPhone: worker.phone?.replace(/[^+\d]/g, ""), // clean number
+      issue: selectedIssue.label,
+      price: Number(selectedIssue.price),
+      userId,
+      userName,
+      userPhone,
+      userAddress,
+      timeSlot,
+    };
+
+    console.log("Booking payload:", bookingData);
+
+    try {
+      // 4️⃣ Save booking
+      const { data } = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/bookings`,
+        bookingData,
+        { headers: getAuthHeaders() }
+      );
+
+      // 5️⃣ WhatsApp notification
+      try {
+        const workerNumber = bookingData.workerPhone;
+        const message = `Hi ${worker.name}, you have a new booking from ${userName} for ${selectedIssue.label} at ${timeSlot}. Please confirm.`;
+
+        await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/tasks/send-whatsapp`,
+          { workerNumber, taskMessage: message },
+          { headers: getAuthHeaders() }
+        );
+
+        console.log("✅ WhatsApp notification sent");
+      } catch (err) {
+        console.warn("⚠️ WhatsApp notification failed:", err?.response?.data || err);
+      }
+
+      // 6️⃣ In-app notification
+      try {
+        await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/notifications`,
+          {
+            workerId: worker._id,
+            message: `New booking from ${userName} for ${selectedIssue.label} at ${timeSlot}`,
+          },
+          { headers: getAuthHeaders() }
+        );
+      } catch (err) {
+        console.warn("⚠️ Notification failed", err);
+      }
+
+      // 7️⃣ Success
+      toast.success("✅ Booking request submitted! Waiting for provider confirmation.");
+      navigate(`/confirmation/${data.booking._id}`);
+    } catch (err) {
+      console.error("Booking error:", err.response || err);
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        toast.error("❌ Token invalid or expired. Please login again.");
+        localStorage.removeItem("token");
+        navigate("/login");
+      } else if (err.response?.status === 400) {
+        toast.error("❌ Booking failed. Invalid request data.");
+      } else {
+        toast.error("❌ Booking failed. Please try again later.");
+      }
+    }
+  };
 
   const isFormValid =
     userName.trim() &&
@@ -166,7 +175,6 @@ const BookingPage = () => {
     userAddress.trim() &&
     selectedIssue &&
     timeSlot;
-
   return (
     <div className="min-h-screen bg-gradient-to-r from-green-100 via-teal-50 to-green-100 p-6 flex justify-center items-center">
       <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-8">

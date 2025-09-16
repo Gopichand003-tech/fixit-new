@@ -27,7 +27,7 @@ app.use(express.json());
 app.use(
   cors({
     origin: [
-      "https://fixit-backend1.onrender.com",
+      "https://fix-it-400z.onrender.com",
       "http://localhost:5000",
       "http://localhost:5173"  // add this for dev frontend
     ],
