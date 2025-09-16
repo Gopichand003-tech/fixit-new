@@ -60,84 +60,105 @@ const BookingPage = () => {
   const issues = issuesData[professionKey] || [];
 
   const handleBooking = async () => {
-    if (!selectedIssue || !userName || !userPhone || !userAddress || !timeSlot) {
-      toast.error("⚠️ Please fill all fields before booking.");
-      return;
-    }
+  // 1️⃣ Basic validation
+  if (!selectedIssue || !userName || !userPhone || !userAddress || !timeSlot) {
+    toast.error("⚠️ Please fill all fields before booking.");
+    return;
+  }
 
-    if (!isValidPhone(userPhone)) {
-      toast.error("⚠️ Please enter a valid 10-digit phone number.");
-      return;
-    }
+  if (!isValidPhone(userPhone)) {
+    toast.error("⚠️ Please enter a valid 10-digit phone number.");
+    return;
+  }
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      toast.error("❌ You must be logged in to book a service.");
-      return;
-    }
+  const token = localStorage.getItem("token");
+  if (!token) {
+    toast.error("❌ You must be logged in to book a service.");
+    return;
+  }
 
-    const bookingData = {
-      workerId: worker._id || worker.id,
-      workerName: worker.name,
-      issue: selectedIssue.label,
-      price: selectedIssue.price,
-      userName,
-      userPhone,
-      userAddress,
-      timeSlot,
-    };
+  // 2️⃣ Decode token to get userId
+  let userId;
+  try {
+    const decoded = JSON.parse(atob(token.split(".")[1])); // simple JWT decode
+    userId = decoded.id || decoded._id;
+    if (!userId) throw new Error("User ID not found in token");
+  } catch (err) {
+    toast.error("❌ Unable to identify user. Please login again.");
+    localStorage.removeItem("token");
+    navigate("/login");
+    return;
+  }
 
+  // 3️⃣ Build booking payload
+  const bookingData = {
+    workerId: worker._id,
+    workerName: worker.name,
+    issue: selectedIssue.label,
+    price: Number(selectedIssue.price),
+    userId,
+    userName,
+    userPhone,
+    userAddress,
+    timeSlot,
+  };
+
+  console.log("Booking payload:", bookingData); // ✅ debug
+
+  try {
+    // 4️⃣ Save booking
+    const { data } = await axios.post(
+      `${import.meta.env.VITE_API_URL}/api/bookings`,
+      bookingData,
+      { headers: getAuthHeaders() }
+    );
+
+    // 5️⃣ WhatsApp notification
     try {
-      // 1️⃣ Save booking
-      const { data } = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/bookings`,
-        bookingData,
+      const workerNumber = worker.phone?.startsWith("+91")
+        ? worker.phone
+        : `+91${worker.phone}`;
+      const message = `Hi ${worker.name}, you have a new booking from ${userName} for ${selectedIssue.label} at ${timeSlot}. Please confirm.`;
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/tasks/send-whatsapp`, {
+        workerNumber,
+        taskMessage: message,
+      });
+      console.log("✅ WhatsApp notification sent");
+    } catch (err) {
+      console.warn("⚠️ WhatsApp notification failed:", err?.response?.data || err);
+    }
+
+    // 6️⃣ In-app notification
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/notifications`,
+        {
+          workerId: worker._id,
+          message: `New booking from ${userName} for ${selectedIssue.label} at ${timeSlot}`,
+        },
         { headers: getAuthHeaders() }
       );
-
-      // 2️⃣ ✅ Ask backend to send WhatsApp notification
-      try {
-        const workerNumber = worker.phone?.startsWith("+91")
-          ? worker.phone
-          : `+91${worker.phone}`;
-        const message = `Hi ${worker.name}, you have a new booking from ${userName} for ${selectedIssue.label} at ${timeSlot}. Please confirm.`;
-        await axios.post(
-          `${import.meta.env.VITE_API_URL}/api/tasks/send-whatsapp`,
-          { workerNumber, taskMessage: message }
-        );
-        console.log("✅ WhatsApp notification request sent to backend");
-      } catch (err) {
-        console.warn("⚠️ WhatsApp notification failed:", err?.response?.data || err);
-      }
-
-      // 3️⃣ Optional: in-app notification
-      try {
-        await axios.post(
-          `${import.meta.env.VITE_API_URL}/api/notifications`,
-          {
-            workerId: worker._id || worker.id,
-            message: `New booking from ${userName} for ${selectedIssue.label} at ${timeSlot}`,
-          },
-          { headers: getAuthHeaders() }
-        );
-      } catch (err) {
-        console.warn("⚠️ Notification failed", err);
-      }
-
-      // 4️⃣ Success
-      toast.success("✅ Booking request submitted! Waiting for provider confirmation.");
-      navigate(`/confirmation/${data.booking._id}`);
     } catch (err) {
-      console.error("Booking error:", err);
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        toast.error("❌ Token invalid or expired. Please login again.");
-        localStorage.removeItem("token");
-        navigate("/login");
-      } else {
-        toast.error("❌ Booking failed. Please try again later.");
-      }
+      console.warn("⚠️ Notification failed", err);
     }
-  };
+
+    // 7️⃣ Success
+    toast.success("✅ Booking request submitted! Waiting for provider confirmation.");
+    navigate(`/confirmation/${data.booking._id}`);
+  } catch (err) {
+    console.error("Booking error:", err.response || err);
+    if (err.response?.status === 401 || err.response?.status === 403) {
+      toast.error("❌ Token invalid or expired. Please login again.");
+      localStorage.removeItem("token");
+      navigate("/login");
+    } else if (err.response?.status === 400) {
+      toast.error("❌ Booking failed. Invalid request data.");
+    } else {
+      toast.error("❌ Booking failed. Please try again later.");
+    }
+  }
+};
+
 
   const isFormValid =
     userName.trim() &&
@@ -145,7 +166,7 @@ const BookingPage = () => {
     userAddress.trim() &&
     selectedIssue &&
     timeSlot;
-    
+
   return (
     <div className="min-h-screen bg-gradient-to-r from-green-100 via-teal-50 to-green-100 p-6 flex justify-center items-center">
       <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-8">

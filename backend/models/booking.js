@@ -3,7 +3,6 @@ import mongoose from "mongoose";
 const bookingSchema = new mongoose.Schema({
   workerId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
     required: true,
   },
   workerName: { type: String, required: true },
