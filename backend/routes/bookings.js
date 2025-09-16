@@ -42,8 +42,8 @@ router.post("/", async (req, res) => {
     await booking.save();
 
     // WhatsApp message to worker with Accept/Reject links
-    const acceptUrl = `${process.env.VITE_API_URL}/api/bookings/${booking._id}/worker/accept?code=${booking.confirmationCode}`;
-    const rejectUrl = `${process.env.VITE_API_URL}/api/bookings/${booking._id}/worker/reject?code=${booking.confirmationCode}`;
+    const acceptUrl = `${process.env.BASE_URL}/api/bookings/${booking._id}/worker/accept?code=${booking.confirmationCode}`;
+    const rejectUrl = `${process.env.BASE_URL}/api/bookings/${booking._id}/worker/reject?code=${booking.confirmationCode}`;
 
     const msg = `🔔 *New Booking Request*
 Issue: ${booking.issue}
