@@ -53,7 +53,7 @@ const WorkerList = () => {
   const scrollContainer = useRef(null);
 
   // ⭐ NEW: temporary hardcoded admin flag
-  const isAdmin = false; // later replace with role from login/auth
+  const isAdmin = true; // later replace with role from login/auth
 
   const professions = [
     { name: "All", icon: Briefcase },
@@ -132,23 +132,24 @@ const WorkerList = () => {
           return;
         }
 
-        const mapped = data.map((p) => {
-          const imagePath = p.documents?.photo || null;
-          const image = imagePath
-            ? `${API_BASE}${imagePath.startsWith("/") ? "" : "/"}${imagePath}`
-            : "/placeholder-user.jpg";
+        
+         const mapped = data.map((p) => {
+  // If p.documents.photo is already a full URL (Cloudinary), use it directly
+  const image = p.documents?.photo
+    ? p.documents.photo // already absolute URL
+    : "/placeholder-user.jpg"; // fallback
 
-          return {
-            _id: p._id,
-            name: p.name || "Unnamed Provider",
-            profession: p.service || "Service",
-            location: p.location || "Unknown",
-            phone: p.phone || "N/A",
-            image,
-            available: true,
-            experience: p.experience || "New Provider",
-          };
-        });
+  return {
+    _id: p._id,
+    name: p.name || "Unnamed Provider",
+    profession: p.service || "Service",
+    location: p.location || "Unknown",
+    phone: p.phone || "N/A",
+    image, // absolute URL now
+    available: true,
+    experience: p.experience || "New Provider",
+  };
+});
 
         setDbProviders(mapped);
       })

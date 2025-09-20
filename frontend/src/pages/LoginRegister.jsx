@@ -5,6 +5,7 @@ import { FiEye, FiEyeOff } from "react-icons/fi";
 import { GoogleLogin } from "@react-oauth/google";
 import { toast, Toaster } from "sonner";
 import { useAuth } from "../context/AuthContext";
+import Cookies from 'js-cookie'
 
 export default function LoginRegister() {
   const [isSignup, setIsSignup] = useState(true);
@@ -34,18 +35,23 @@ export default function LoginRegister() {
       const payload = isSignup
         ? { name: formData.name, email: formData.email, password: formData.password }
         : { email: formData.email, password: formData.password };
+        console.log(payload)
 
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/api/auth${endpoint}`,
-        payload
+        payload,{
+          withCredentials:true
+        }
       );
+      console.log(response);
 
       if (response.data.token) {
         loginUser(response.data.user, response.data.token);
+        Cookies.set("token",response.data.token,{expires:7,path:'/'})
 
         toast.success(`${isSignup ? "Signup" : "Login"} Successful ✅`, {
           description: `Welcome, ${response.data.user?.name || "User"}!`,
-          duration: 1700,
+          duration: 1000,
         });
 
         navigate("/dashboard");
@@ -69,8 +75,9 @@ export default function LoginRegister() {
       loginUser(res.data.user, res.data.token);
       toast.success("Google Login Successful ✅", {
         description: `Welcome, ${res.data.user?.name || "User"}!`,
-        duration: 1700,
+        duration: 1000,
       });
+        console.log("Google Response:", credentialResponse);
 
       navigate("/dashboard");
     } catch (err) {

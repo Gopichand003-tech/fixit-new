@@ -161,7 +161,7 @@ function App() {
             }
           />
 
-          {/* Update Profile */}
+          Update Profile
           <Route
             path="/update-profile"
             element={

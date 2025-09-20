@@ -1,17 +1,16 @@
 // routes/Authroute.js
 import express from "express";
-import { 
-  userSignup, 
-  userSignin, 
-  resetPassword, 
-  resetPasswordRequest, 
+import {
+  userSignup,
+  userSignin,
+  resetPassword,
+  resetPasswordRequest,
   googleLogin,
   updateProfile,
-  upload  // make sure you export this from Authcontroller.js
+  uploadAvatar // <-- still imported, but now it's temp storage only
 } from "../controllers/Authcontroller.js";
 
-// ✅ import protect middleware
-import  protect  from "../Middleware/protect.js";  
+import protect from "../Middleware/protect.js";
 
 const router = express.Router();
 
@@ -26,7 +25,12 @@ router.post('/new-password', resetPassword);
 // Google login
 router.post('/google', googleLogin);
 
-// Update profile (protected route)
-router.put('/update-profile', protect, upload.single('profilePic'), updateProfile);
+// ✅ Update profile (Cloudinary)
+router.put(
+  '/update-profile',
+  protect,
+  uploadAvatar.single('profilePic'), // still same frontend usage
+  updateProfile
+);
 
 export default router;

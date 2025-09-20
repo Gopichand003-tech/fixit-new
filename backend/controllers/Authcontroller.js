@@ -7,25 +7,33 @@ import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import { OAuth2Client } from 'google-auth-library';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
-if (!process.env.JWT_SECRET) {
-  console.warn('⚠️ JWT_SECRET is missing in environment variables');
-}
-if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-  console.warn('⚠️ Email credentials missing: EMAIL_USER/EMAIL_PASS');
-}
 
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+/* ----------------------------- ENV Checks ----------------------------- */
+if (!process.env.JWT_SECRET) console.warn('⚠️ JWT_SECRET missing');
+if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS)
+  console.warn('⚠️ EMAIL_USER or EMAIL_PASS missing');
+if (!process.env.CLOUDINARY_CLOUD_NAME ||
+    !process.env.CLOUDINARY_API_KEY ||
+    !process.env.CLOUDINARY_API_SECRET)
+  console.warn('⚠️ Cloudinary credentials missing');
 
-/* ----------------------------- helpers ----------------------------- */
+/* -------------------------- Cloudinary Config -------------------------- */
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+/* ------------------------------ Helpers ------------------------------ */
 const signToken = (id, role = 'user') =>
   jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
 const absoluteUrl = (req, maybePath) => {
   if (!maybePath) return null;
-  if (/^https?:\/\//i.test(maybePath)) return maybePath;
+  if (/^https?:\/\//i.test(maybePath)) return maybePath; // already full URL
   const base = `${req.protocol}://${req.get('host')}`;
   return `${base}${maybePath.startsWith('/') ? '' : '/'}${maybePath}`;
 };
@@ -37,24 +45,20 @@ const publicUser = (req, userDoc) => ({
   profilePic: absoluteUrl(req, userDoc.profilePic),
 });
 
-/* --------------------------- mail transporter --------------------------- */
+/* --------------------------- Mail Transport --------------------------- */
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
   secure: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
+  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
 });
+transporter.verify()
+  .then(() => console.log('✅ SMTP ready'))
+  .catch(err => console.error('❌ SMTP error:', err.message));
 
-transporter.verify().then(() => {
-  console.log('✅ SMTP ready');
-}).catch((err) => {
-  console.error('❌ SMTP configuration error:', err.message);
-});
+/* ---------------------------- Google Login ---------------------------- */
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-/* ----------------------------- GOOGLE LOGIN ---------------------------- */
 export const googleLogin = async (req, res) => {
   try {
     const { token } = req.body;
@@ -69,7 +73,6 @@ export const googleLogin = async (req, res) => {
 
     const payload = ticket.getPayload();
     const { email, name, sub: googleId, picture } = payload;
-
     let user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
@@ -89,13 +92,13 @@ export const googleLogin = async (req, res) => {
 
     const jwtToken = signToken(user._id);
     return res.json({ message: 'Google login successful', token: jwtToken, user: publicUser(req, user) });
-  } catch (error) {
-    console.error('Google login error:', error);
+  } catch (err) {
+    console.error('Google login error:', err);
     return res.status(500).json({ message: 'Google login failed' });
   }
 };
 
-/* ----------------------------- SIGN UP ---------------------------- */
+/* ------------------------------- Sign Up ------------------------------- */
 export const userSignup = async (req, res) => {
   try {
     const { name, email, password, profilePic } = req.body;
@@ -106,138 +109,76 @@ export const userSignup = async (req, res) => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail))
       return res.status(400).json({ message: 'Invalid email format' });
 
-    const existingUser = await User.findOne({ email: normalizedEmail });
-    if (existingUser) return res.status(409).json({ message: 'User already exists' });
+    if (await User.findOne({ email: normalizedEmail }))
+      return res.status(409).json({ message: 'User already exists' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const user = await User.create({
       name,
       email: normalizedEmail,
       password: hashedPassword,
-      profilePic: profilePic || null,
+      profilePic: profilePic || null, // optional direct URL
     });
 
     const token = signToken(user._id);
-    return res.status(201).json({ message: 'User registered successfully', token, user: publicUser(req, user) });
-  } catch (error) {
-    console.error('Signup error:', error);
+    return res.status(201).json({
+      message: 'User registered successfully',
+      token,
+      user: publicUser(req, user),
+    });
+  } catch (err) {
+    console.error('Signup error:', err);
     return res.status(500).json({ message: 'Server error' });
   }
 };
 
-/* ----------------------------- SIGN IN ---------------------------- */
+/* ------------------------------- Sign In ------------------------------- */
 export const userSignin = async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password)
       return res.status(400).json({ message: 'Email and password are required' });
 
-    const normalizedEmail = email.toLowerCase();
-    const user = await User.findOne({ email: normalizedEmail }).select('+password');
+    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
     if (!user) return res.status(404).json({ message: 'User not found' });
-    if (!user.password) return res.status(400).json({ message: 'Use Google Sign-In for this account' });
+    if (!user.password)
+      return res.status(400).json({ message: 'Use Google Sign-In for this account' });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
     const token = signToken(user._id);
-    return res.json({ message: 'Login successful', token, user: publicUser(req, user) });
-  } catch (error) {
-    console.error('Signin error:', error);
+    return res.status(200).json({ message: 'Login successful', token, user: publicUser(req, user) });
+  } catch (err) {
+    console.error('Signin error:', err);
     return res.status(500).json({ message: 'Server error' });
   }
 };
 
-/* --------------------------- PASSWORD RESET FLOW -------------------------- */
-/* --------------------------- PASSWORD RESET FLOW -------------------------- */
+/* --------------------------- Password Reset --------------------------- */
 export const resetPasswordRequest = async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ message: 'Email is required' });
 
-    const normalizedEmail = email.toLowerCase();
-    const user = await User.findOne({ email: normalizedEmail });
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     user.resetOtp = otp;
-    user.resetOtpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+    user.resetOtpExpiry = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    // Email content
-    const htmlContent = `
-      <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-        <h2 style="color: #333;">FIX-IT Password Reset</h2>
-        <p>Hello ${user.name || 'User'},</p>
-        <p>Use the OTP below to reset your password:</p>
-        <h1 style="background: #f4f4f4; display: inline-block; padding: 10px 20px; border-radius: 5px; letter-spacing: 5px;">${otp}</h1>
-        <p style="color: #777; font-size: 14px;">This OTP will expire in 10 minutes.</p>
-        <hr style="margin-top: 40px;">
-        <p style="font-size: 12px; color: #aaa;">© 2025 FIX-IT. All rights reserved.</p>
-      </div>
-    `;
-
-    const mailOptions = {
+    await transporter.sendMail({
       from: `FIX-IT Support <${process.env.EMAIL_USER}>`,
       to: user.email,
       subject: 'Your FIX-IT Password Reset OTP',
-      text: `Your OTP is ${otp}. It will expire in 10 minutes.`,
-      html: htmlContent,
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✉️ OTP mail sent successfully:', info.messageId);
-
+      html: `<h2>OTP: ${otp}</h2><p>Expires in 10 minutes.</p>`,
+    });
     return res.json({ message: 'OTP sent to email' });
   } catch (err) {
-    console.error('❌ resetPasswordRequest error:', err);
-    if (err.response) {
-      console.error('SMTP response:', err.response);
-      console.error('SMTP code:', err.responseCode);
-      console.error('SMTP command:', err.command);
-      console.error('SMTP message:', err.message);
-    }
-    return res.status(500).json({
-      message: 'Failed to send OTP',
-      error: err.message,
-      smtpResponse: err.response || null,
-    });
-  }
-};
-
-// Confirmation email
-export const sendPasswordResetConfirmation = async (userEmail, userName) => {
-  try {
-    const htmlContent = `
-      <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-        <h2 style="color: #333;">FIX-IT Password Reset Successful</h2>
-        <p>Hello ${userName || 'User'},</p>
-        <p>Your password has been successfully reset. You can now log in using your new password.</p>
-        <hr style="margin-top: 40px;">
-        <p style="font-size: 12px; color: #aaa;">© 2025 FIX-IT. All rights reserved.</p>
-      </div>
-    `;
-
-    const mailOptions = {
-      from: `FIX-IT Support <${process.env.EMAIL_USER}>`,
-      to: userEmail,
-      subject: 'Your FIX-IT Password Has Been Reset',
-      text: `Your password has been successfully reset.`,
-      html: htmlContent,
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✉️ Password reset confirmation email sent:', info.messageId);
-  } catch (err) {
-    console.error('❌ Error sending password reset confirmation:', err);
-    if (err.response) {
-      console.error('SMTP response:', err.response);
-      console.error('SMTP code:', err.responseCode);
-      console.error('SMTP command:', err.command);
-      console.error('SMTP message:', err.message);
-    }
+    console.error('resetPasswordRequest error:', err);
+    return res.status(500).json({ message: 'Failed to send OTP' });
   }
 };
 
@@ -247,50 +188,46 @@ export const resetPassword = async (req, res) => {
     if (!email || !otp || !newPassword)
       return res.status(400).json({ message: 'Email, OTP, and new password are required' });
 
-    const normalizedEmail = email.toLowerCase();
-    const user = await User.findOne({ email: normalizedEmail });
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) return res.status(404).json({ message: 'User not found' });
-
-    if (!user.resetOtp || !user.resetOtpExpiry)
-      return res.status(400).json({ message: 'No OTP request found' });
-
-    if (user.resetOtp !== otp)
-      return res.status(400).json({ message: 'Invalid OTP' });
-
-    if (user.resetOtpExpiry < Date.now())
-      return res.status(400).json({ message: 'OTP expired' });
+    if (user.resetOtp !== otp || user.resetOtpExpiry < Date.now())
+      return res.status(400).json({ message: 'Invalid or expired OTP' });
 
     user.password = await bcrypt.hash(newPassword, 10);
     user.resetOtp = undefined;
     user.resetOtpExpiry = undefined;
     await user.save();
-
-    // Send confirmation email
-    sendPasswordResetConfirmation(user.email, user.name);
-
     return res.json({ message: 'Password reset successful' });
   } catch (err) {
     console.error('resetPassword error:', err);
-    return res.status(500).json({ message: 'Server error', error: err.message });
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 
-
-
-/* ------------------------------ Multer setup ----------------------------- */
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = 'uploads/avatars';
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}${path.extname(file.originalname)}`);
+/* ------------------------- Cloudinary Uploads ------------------------- */
+// Avatar Upload (Profile Pics)
+const avatarStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'fixit/avatars',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+    transformation: [{ width: 400, height: 400, crop: 'limit' }],
   },
 });
+export const uploadAvatar = multer({ storage: avatarStorage });
 
-export const upload = multer({ storage });
+// // Provider Uploads (Photos & Documents)
+// const providerStorage = new CloudinaryStorage({
+//   cloudinary,
+//   params: {
+//     folder: 'fixit/providers',
+//     allowed_formats: ['jpg', 'jpeg', 'png', 'pdf'],
+//     transformation: [{ width: 800, height: 800, crop: 'limit' }],
+//   },
+// });
+// export const uploadProviderFiles = multer({ storage: providerStorage });
 
+/* ---------------------------- Update Profile --------------------------- */
 export const updateProfile = async (req, res) => {
   try {
     const { name, email } = req.body;
@@ -299,14 +236,10 @@ export const updateProfile = async (req, res) => {
     const updateData = {};
     if (name) updateData.name = name;
     if (email) updateData.email = email.toLowerCase();
-    if (req.file) updateData.profilePic = `/uploads/avatars/${req.file.filename}`;
+    if (req.file && req.file.path) updateData.profilePic = req.file.path; // ✅ secure_url from Cloudinary
 
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true });
-
-    return res.json({
-      message: 'Profile updated successfully',
-      user: publicUser(req, updatedUser),
-    });
+    return res.json({ message: 'Profile updated successfully', user: publicUser(req, updatedUser) });
   } catch (err) {
     console.error('updateProfile error:', err);
     return res.status(500).json({ message: 'Profile update failed' });

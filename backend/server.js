@@ -1,4 +1,3 @@
-// server.js
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -12,11 +11,11 @@ import providerRoute from "./routes/pro-route.js";
 import testimonialRoutes from "./routes/Testimonials.js";
 import bookingsRoutes from "./routes/bookings.js";
 import notificationsRoutes from "./routes/notifications.js";
-import tasksRoute from "./routes/tasks.js"; // WhatsApp tasks
+import tasksRoute from "./routes/tasks.js";
+import bodyParser from "body-parser";
+import cookieParser from "cookie-parser";
 
-
-  dotenv.config();
-
+dotenv.config();
 const app = express();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -24,17 +23,19 @@ const __dirname = path.dirname(__filename);
 
 // ---------- Middleware ----------
 app.use(express.json());
+app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
 app.use(
   cors({
     origin: [
       "https://fix-it-400z.onrender.com",
       "http://localhost:5000",
-      "http://localhost:5173"  // add this for dev frontend
+      "http://localhost:5173"
     ],
     credentials: true,
   })
 );
-
 
 // ---------- MongoDB ----------
 mongoose
@@ -54,11 +55,11 @@ app.use("/api/bookings", bookingsRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/tasks", tasksRoute); // WhatsApp tasks
 
+// ❌ Remove local uploads static because Cloudinary handles final images
+// app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// ---------- Static Files ----------
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// ---------- Frontend ----------
 app.use(express.static(path.join(__dirname, "frontend-dist")));
-
 app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, "frontend-dist", "index.html"));
 });

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { issuesData } from "../data/issueOptions";
 import { toast } from "sonner";
+import Cookies from "js-cookie"
 import axios from "axios";
 import {
   MapPin,
@@ -22,13 +23,13 @@ const isValidPhone = (phone) => /^[6-9]\d{9}$/.test(phone);
 
 // Helper: Centralized auth headers
 const getAuthHeaders = () => {
-  const token = localStorage.getItem("token");
+  const token = Cookies.get("token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
 // Helper: Decode JWT and return userId
 const getUserIdFromToken = () => {
-  const token = localStorage.getItem("token");
+  const token = Cookies.get("token");
   if (!token) return null;
 
   try {
@@ -82,7 +83,7 @@ const BookingPage = () => {
       return;
     }
 
-    const token = localStorage.getItem("token");
+    const token = Cookies.get("token");
     if (!token) {
       toast.error("❌ You must be logged in to book a service.");
       navigate("/login");
@@ -93,7 +94,7 @@ const BookingPage = () => {
     const userId = getUserIdFromToken();
     if (!userId) {
       toast.error("❌ Unable to identify user. Please login again.");
-      localStorage.removeItem("token");
+      Cookies.remove("token");
       navigate("/login");
       return;
     }
@@ -134,33 +135,35 @@ const BookingPage = () => {
         );
 
         console.log("✅ WhatsApp notification sent");
+         navigate("/dashboard");
       } catch (err) {
         console.warn("⚠️ WhatsApp notification failed:", err?.response?.data || err);
       }
+      
 
-      // 6️⃣ In-app notification
-      try {
-        await axios.post(
-          `${import.meta.env.VITE_API_URL}/api/notifications`,
-          {
-            workerId: worker._id,
-            message: `New booking from ${userName} for ${selectedIssue.label} at ${timeSlot}`,
-          },
-          { headers: getAuthHeaders() }
-        );
-      } catch (err) {
-        console.warn("⚠️ Notification failed", err);
-      }
+      // // 6️⃣ In-app notification
+      // try {
+      //   await axios.post(
+      //     `${import.meta.env.VITE_API_URL}/api/notifications`,
+      //     {
+      //       workerId: worker._id,
+      //       message: `New booking from ${userName} for ${selectedIssue.label} at ${timeSlot}`,
+      //     },
+      //     { headers: getAuthHeaders() }
+      //   );
+      // } catch (err) {
+      //   console.warn("⚠️ Notification failed", err);
+      // }
 
       // 7️⃣ Success
-      toast.success("✅ Booking request submitted! Waiting for provider confirmation.");
-      navigate(`/confirmation/${data.booking._id}`);
+      // toast.success("✅ Booking request submitted! Waiting for provider confirmation.");
+      // navigate(`/confirmation/${data.booking._id}`);
     } catch (err) {
       console.error("Booking error:", err.response || err);
       if (err.response?.status === 401 || err.response?.status === 403) {
         toast.error("❌ Token invalid or expired. Please login again.");
         localStorage.removeItem("token");
-        navigate("/login");
+        navigate("/dashboard");
       } else if (err.response?.status === 400) {
         toast.error("❌ Booking failed. Invalid request data.");
       } else {
