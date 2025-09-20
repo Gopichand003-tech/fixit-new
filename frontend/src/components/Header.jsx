@@ -22,6 +22,7 @@ const Header = () => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false);
       }
+      console.log(user.profilePic);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -157,8 +158,8 @@ const handleNotificationClick = async () => {
                 className="flex items-center justify-center w-12 h-12 rounded-full hover:bg-gray-100 transition"
               >
                 {user ? (
-                  user.avatar || user.profilePic ? (
-                    <img src={user.avatar || user.profilePic} alt={user.name} className="w-10 h-10 rounded-full border-2 border-purple-500" />
+                  user.profilePic ? (
+                    <img src={user.profilePic} alt={user.name} className="w-10 h-10 rounded-full border-2 border-purple-500" />
                   ) : (
                     <span className="w-10 h-10 flex items-center justify-center bg-purple-500 text-white font-semibold rounded-full">
                       {user.name ? user.name.split(" ").map(n => n[0]).join("").toUpperCase() : "U"}

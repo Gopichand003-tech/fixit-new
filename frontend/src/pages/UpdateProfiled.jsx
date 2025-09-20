@@ -76,7 +76,7 @@ const UpdateProfile = () => {
     }
   };
 
-  const profilePicUrl = profilePicPreview
+  const profilePicUrl = profilePicPreview 
     ? profilePicPreview.startsWith("http") || profilePicPreview.startsWith("data:")
       ? profilePicPreview
       : `${import.meta.env.VITE_API_URL}/${profilePicPreview}`

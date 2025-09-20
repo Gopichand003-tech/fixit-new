@@ -102,6 +102,9 @@ const API = import.meta.env.VITE_API_URL || VITE_API_URI;
     }
     setLoading(false);
   };
+
+  // upload documents
+  
 const submitDocuments = async () => {
   const data = new FormData();
 
@@ -112,21 +115,24 @@ const submitDocuments = async () => {
   data.append("location", formData.location);
   data.append("phone", formData.phone);
 
-  // append files correctly (multer expects these keys)
-  if (formData.documents.photo) data.append("photo", formData.documents.photo);
+  // ✅ FIX 2: append files correctly (keys must match multer field names)
+  if (formData.documents.photo)   data.append("photo", formData.documents.photo);
   if (formData.documents.aadhaar) data.append("aadhaar", formData.documents.aadhaar);
   if (formData.documents.pancard) data.append("pancard", formData.documents.pancard);
 
   try {
-    await axios.post(`${API}/api/providers`, data, {
+    const res = await axios.post(`${API}/api/providers`, data, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+
+    console.log("✅ Uploaded to Cloudinary:", res.data);
     setStep(6);
   } catch (err) {
-    console.error("❌ Register error:", err.response?.data || err.message);
+    console.error("❌ Upload error:", err.response?.data || err.message);
     alert(err.response?.data?.message || "Failed to upload documents");
   }
 };
+
 
   const handlePayment = () => {
     setFormData({ ...formData, paymentSuccess: true });

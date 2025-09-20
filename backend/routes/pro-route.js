@@ -1,28 +1,17 @@
 import express from "express";
-import multer from "multer";
-import fs from "fs";
-import path from "path";
 import Provider from "../models/Provider.js";
+import { uploadProviderFiles } from "../utils/cloudinary.js"; // ✅ Cloudinary multer
 
 const router = express.Router();
 
-// Multer storage configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = "uploads/providers";
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
-  },
-});
+/* ---------------------- Helper ---------------------- */
+// Always prefer secure_url if available
+const getCloudUrl = (fileArr) =>
+  fileArr?.[0]?.secure_url || fileArr?.[0]?.path || "";
 
-const upload = multer({ storage });
+/* ---------------------- Routes ---------------------- */
 
-// ------------------ Routes ------------------
-
-// 1️⃣ Search providers (must be before /:id)
+// 1️⃣ Search providers
 router.get("/search", async (req, res) => {
   try {
     const { location, service } = req.query;
@@ -33,67 +22,60 @@ router.get("/search", async (req, res) => {
     const providers = await Provider.find(filter);
     res.json(providers);
   } catch (err) {
-    console.error("Error searching providers:", err);
+    console.error("Search Error:", err);
     res.status(500).json({ message: "Failed to search providers" });
   }
 });
 
 // 2️⃣ Get all providers
-router.get("/", async (req, res) => {
+router.get("/", async (_req, res) => {
   try {
     const providers = await Provider.find();
     res.json(providers);
   } catch (err) {
-    console.error("Error fetching providers:", err);
+    console.error("Fetch Error:", err);
     res.status(500).json({ message: "Failed to fetch providers" });
   }
 });
 
-// 3️⃣ Create provider
+// 3️⃣ Register provider with Cloudinary uploads
 router.post(
-  "/",
-  upload.fields([
+  "/providers",
+  uploadProviderFiles.fields([
     { name: "photo", maxCount: 1 },
     { name: "aadhaar", maxCount: 1 },
     { name: "pancard", maxCount: 1 },
   ]),
   async (req, res) => {
     try {
-      const { name, service, experience, location, phone } = req.body;
-      const documents = {};
-      if (req.files.photo) documents.photo = `/uploads/providers/${req.files.photo[0].filename}`;
-      if (req.files.aadhaar) documents.aadhaar = `/uploads/providers/${req.files.aadhaar[0].filename}`;
-      if (req.files.pancard) documents.pancard = `/uploads/providers/${req.files.pancard[0].filename}`;
+      console.log("✅ Uploaded to Cloudinary:", req.files);
 
       const provider = await Provider.create({
-        name,
-        service,
-        experience,
-        location,
-        phone,
-        documents,
+        name: req.body.name,
+        service: req.body.service,
+        experience: req.body.experience,
+        location: req.body.location,
+        phone: req.body.phone,
+        documents: {
+          photo: getCloudUrl(req.files.photo),
+          aadhaar: getCloudUrl(req.files.aadhaar),
+          pancard: getCloudUrl(req.files.pancard),
+        },
+        membershipPaid: false,
       });
 
-      res.status(201).json({ message: "Provider registered successfully", provider });
+      res.status(201).json({
+        message: "Provider registered successfully",
+        provider,
+      });
     } catch (err) {
-      console.error("Error registering provider:", err);
-      res.status(500).json({ message: "Failed to register provider" });
+      console.error("❌ Provider Create Error:", err);
+      res.status(500).json({ message: "Failed to create provider" });
     }
   }
 );
 
-// 4️⃣ Get single provider by ID (dynamic route must be after fixed routes)
-router.get("/:id", async (req, res) => {
-  try {
-    const provider = await Provider.findById(req.params.id);
-    if (!provider) return res.status(404).json({ message: "Provider not found" });
-    res.json(provider);
-  } catch (err) {
-    res.status(500).json({ message: "Failed to fetch provider" });
-  }
-});
-
-// 5️⃣ Update membership
+// 4️⃣ Update membership
 router.patch("/:id/membership", async (req, res) => {
   try {
     const { membershipPaid } = req.body;
@@ -102,24 +84,29 @@ router.patch("/:id/membership", async (req, res) => {
       { membershipPaid },
       { new: true }
     );
-    if (!provider) return res.status(404).json({ message: "Provider not found" });
+    if (!provider)
+      return res.status(404).json({ message: "Provider not found" });
     res.json({ message: "Membership updated", provider });
   } catch (err) {
+    console.error("Membership Update Error:", err);
     res.status(500).json({ message: "Failed to update membership" });
   }
 });
 
-// 6️⃣ Delete provider (admin only)
+// 5️⃣ Delete provider
 router.delete("/:id", async (req, res) => {
   try {
     const isAdmin = req.headers["x-admin-secret"] === process.env.ADMIN_SECRET;
-    if (!isAdmin) return res.status(403).json({ message: "Only admin can delete providers" });
+    if (!isAdmin)
+      return res.status(403).json({ message: "Only admin can delete providers" });
 
     const provider = await Provider.findByIdAndDelete(req.params.id);
-    if (!provider) return res.status(404).json({ message: "Provider not found" });
+    if (!provider)
+      return res.status(404).json({ message: "Provider not found" });
 
     res.json({ message: "Provider deleted successfully" });
   } catch (err) {
+    console.error("Delete Error:", err);
     res.status(500).json({ message: "Failed to delete provider" });
   }
 });
