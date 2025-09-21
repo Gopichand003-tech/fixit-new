@@ -8,7 +8,7 @@ import nodemailer from 'nodemailer';
 import { OAuth2Client } from 'google-auth-library';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
+// import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
 
 /* ----------------------------- ENV Checks ----------------------------- */
@@ -214,7 +214,7 @@ const avatarStorage = new CloudinaryStorage({
     transformation: [{ width: 400, height: 400, crop: 'limit' }],
   },
 });
-export const uploadAvatar = multer({ storage: avatarStorage });
+// export const uploadAvatar = multer({ storage: avatarStorage });
 
 // // Provider Uploads (Photos & Documents)
 // const providerStorage = new CloudinaryStorage({
@@ -228,20 +228,29 @@ export const uploadAvatar = multer({ storage: avatarStorage });
 // export const uploadProviderFiles = multer({ storage: providerStorage });
 
 /* ---------------------------- Update Profile --------------------------- */
-export const updateProfile = async (req, res) => {
+const storage = multer.memoryStorage();
+export const uploadAvatar = multer({ storage });
+
+// Middleware to upload to Cloudinary
+export const uploadToCloudinary = (folder) => async (req, res, next) => {
+  if (!req.file) return next();
+
   try {
-    const { name, email } = req.body;
-    const userId = req.user._id;
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder, transformation: [{ width: 400, height: 400, crop: 'limit' }] },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        }
+      );
+      streamifier.createReadStream(req.file.buffer).pipe(stream);
+    });
 
-    const updateData = {};
-    if (name) updateData.name = name;
-    if (email) updateData.email = email.toLowerCase();
-    if (req.file && req.file.path) updateData.profilePic = req.file.path; // ✅ secure_url from Cloudinary
-
-    const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true });
-    return res.json({ message: 'Profile updated successfully', user: publicUser(req, updatedUser) });
+    req.file.path = result.secure_url; // store Cloudinary URL in req.file.path
+    next();
   } catch (err) {
-    console.error('updateProfile error:', err);
-    return res.status(500).json({ message: 'Profile update failed' });
+    console.error('Cloudinary upload error:', err);
+    res.status(500).json({ message: 'File upload failed' });
   }
 };
