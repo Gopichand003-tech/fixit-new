@@ -7,7 +7,8 @@ import {
   resetPasswordRequest,
   googleLogin,
   updateProfile,
-  uploadAvatar // <-- still imported, but now it's temp storage only
+  uploadAvatar 
+  // <-- still imported, but now it's temp storage only
 } from "../controllers/Authcontroller.js";
 
 import protect from "../Middleware/protect.js";
@@ -26,11 +27,14 @@ router.post('/new-password', resetPassword);
 router.post('/google', googleLogin);
 
 // ✅ Update profile (Cloudinary)
-router.put(
+// import { uploadAvatar, uploadToCloudinary } from '...';
+
+router.post(
   '/update-profile',
-  protect,
-  uploadAvatar.single('profilePic'), // still same frontend usage
+  uploadAvatar.single('profilePic'),
+  uploadToCloudinary('fixit/avatars'),
   updateProfile
 );
+
 
 export default router;

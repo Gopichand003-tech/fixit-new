@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+     "build": "npm install --legacy-peer-deps"
   },
   "keywords": [],
   "author": "",
@@ -22,7 +23,6 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.17.0",
     "multer": "^2.0.2",
-    "multer-storage-cloudinary": "^4.0.0",
     "nodemailer": "^7.0.5",
     "twilio": "^5.8.0"
   },
