@@ -206,6 +206,24 @@ export const resetPassword = async (req, res) => {
   }
 };
 
+export const updateProfile = async (req, res) => {
+  try {
+    const { name } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (name) user.name = name;
+    if (req.file?.path) user.profilePic = req.file.path;
+
+    await user.save();
+    res.json({ message: "Profile updated successfully", user: publicUser(req, user) });
+  } catch (err) {
+    console.error("updateProfile error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
 /* ------------------------- Cloudinary Uploads ------------------------- */
 // Avatar Upload (Profile Pics)
 const avatarStorage = new CloudinaryStorage({

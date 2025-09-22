@@ -1,4 +1,3 @@
-// routes/Authroute.js
 import express from "express";
 import {
   userSignup,
@@ -7,8 +6,8 @@ import {
   resetPasswordRequest,
   googleLogin,
   updateProfile,
-  uploadAvatar 
-  // <-- still imported, but now it's temp storage only
+  uploadAvatar,
+  uploadToCloudinary
 } from "../controllers/Authcontroller.js";
 
 import protect from "../Middleware/protect.js";
@@ -27,14 +26,12 @@ router.post('/new-password', resetPassword);
 router.post('/google', googleLogin);
 
 // ✅ Update profile (Cloudinary)
-// import { uploadAvatar, uploadToCloudinary } from '...';
-
 router.post(
   '/update-profile',
+  protect,
   uploadAvatar.single('profilePic'),
   uploadToCloudinary('fixit/avatars'),
   updateProfile
 );
-
 
 export default router;
