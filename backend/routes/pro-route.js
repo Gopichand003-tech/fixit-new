@@ -40,7 +40,7 @@ router.get("/", async (_req, res) => {
 
 // 3️⃣ Register provider with Cloudinary uploads
 router.post(
-  "/providers",
+  "/",
   uploadProviderFiles.fields([
     { name: "photo", maxCount: 1 },
     { name: "aadhaar", maxCount: 1 },

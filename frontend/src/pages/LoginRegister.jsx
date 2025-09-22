@@ -26,108 +26,116 @@ export default function LoginRegister() {
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
+// manual Signup/Login
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const endpoint = isSignup ? "/signup" : "/signin"; // updated login endpoint
+    const payload = isSignup
+      ? { name: formData.name, email: formData.email, password: formData.password }
+      : { email: formData.email, password: formData.password };
 
-  // manual Signup/Login
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const endpoint = isSignup ? "/signup" : "/login";
-      const payload = isSignup
-        ? { name: formData.name, email: formData.email, password: formData.password }
-        : { email: formData.email, password: formData.password };
-        console.log(payload)
+    console.log("Payload:", payload);
 
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/auth${endpoint}`,
-        payload,{
-          withCredentials:true
-        }
-      );
-      console.log(response);
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_URL}/api/auth${endpoint}`,
+      payload,
+      { withCredentials: true }
+    );
 
-      if (response.data.token) {
-        loginUser(response.data.user, response.data.token);
-        Cookies.set("token",response.data.token,{expires:7,path:'/'})
+    console.log("Response:", response.data);
 
-        toast.success(`${isSignup ? "Signup" : "Login"} Successful ✅`, {
-          description: `Welcome, ${response.data.user?.name || "User"}!`,
-          duration: 1000,
-        });
+    if (response.data.token) {
+      loginUser(response.data.user, response.data.token);
+      Cookies.set("token", response.data.token, { expires: 7, path: "/" });
 
-        navigate("/dashboard");
-      } else {
-        toast.info(response.data.message || "Success");
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Request failed");
-    }
-  };
-
-  // Google login
-  const handleGoogleLogin = async (credentialResponse) => {
-    try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/google`, {
-        token: credentialResponse.credential,
+      toast.success(`${isSignup ? "Signup" : "Login"} Successful ✅`, {
+        description: `Welcome, ${response.data.user?.name || "User"}!`,
+        duration: 2000,
       });
-
-      if (!res.data?.token) throw new Error("No token received from server");
-
-      loginUser(res.data.user, res.data.token);
-      toast.success("Google Login Successful ✅", {
-        description: `Welcome, ${res.data.user?.name || "User"}!`,
-        duration: 1000,
-      });
-        console.log("Google Response:", credentialResponse);
 
       navigate("/dashboard");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Google login failed");
+    } else {
+      toast.info(response.data.message || "Success");
     }
-  };
+  } catch (err) {
+    console.error("Auth error:", err.response?.data || err.message);
+    toast.error(err.response?.data?.message || "Request failed");
+  }
+};
 
-  // Forgot Password (Step 1 → Send OTP)
-  const handleForgotSubmit = async (e) => {
-    e.preventDefault();
-    if (!forgotEmail) {
-      toast.error("Please enter your email");
-      return;
-    }
-    setLoadingForgot(true);
-    try {
-     await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/forgot-password`, { email: forgotEmail });
+// Google login
+const handleGoogleLogin = async (credentialResponse) => {
+  try {
+    const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/google-login`, {
+      token: credentialResponse.credential,
+    });
 
-      toast.success("OTP sent to your email");
-      setForgotModalOpen(false);
-      setResetModalOpen(true); // open OTP modal
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Error sending OTP");
-    } finally {
-      setLoadingForgot(false);
-    }
-  };
+    console.log("Google Response:", res.data);
 
-  // Reset Password (Step 2 → Verify OTP + new password)
-  const handleResetSubmit = async (e) => {
-    e.preventDefault();
-    if (!otp || !newPassword) {
-      toast.error("Enter OTP and new password");
-      return;
-    }
-    setLoadingReset(true);
-    try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/new-password`, {
-        email: forgotEmail,
-        otp,
-        newPassword,
-      });
-      toast.success("Password reset successful, please login");
-      setResetModalOpen(false);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Error resetting password");
-    } finally {
-      setLoadingReset(false);
-    }
-  };
+    if (!res.data?.token) throw new Error("No token received from server");
+
+    loginUser(res.data.user, res.data.token);
+    Cookies.set("token", res.data.token, { expires: 7, path: "/" });
+
+    toast.success("Google Login Successful ✅", {
+      description: `Welcome, ${res.data.user?.name || "User"}!`,
+      duration: 2000,
+    });
+
+    navigate("/dashboard");
+  } catch (err) {
+    console.error("Google login error:", err.response?.data || err.message);
+    toast.error(err.response?.data?.message || "Google login failed");
+  }
+};
+
+// Forgot Password (Step 1 → Send OTP)
+const handleForgotSubmit = async (e) => {
+  e.preventDefault();
+  if (!forgotEmail) {
+    toast.error("Please enter your email");
+    return;
+  }
+  setLoadingForgot(true);
+  try {
+    await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/reset-password-request`, { email: forgotEmail });
+
+    toast.success("OTP sent to your email");
+    setForgotModalOpen(false);
+    setResetModalOpen(true); // open OTP modal
+  } catch (err) {
+    console.error("Forgot password error:", err.response?.data || err.message);
+    toast.error(err.response?.data?.message || "Error sending OTP");
+  } finally {
+    setLoadingForgot(false);
+  }
+};
+
+// Reset Password (Step 2 → Verify OTP + new password)
+const handleResetSubmit = async (e) => {
+  e.preventDefault();
+  if (!otp || !newPassword) {
+    toast.error("Enter OTP and new password");
+    return;
+  }
+  setLoadingReset(true);
+  try {
+    await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/reset-password`, {
+      email: forgotEmail,
+      otp,
+      newPassword,
+    });
+    toast.success("Password reset successful, please login");
+    setResetModalOpen(false);
+  } catch (err) {
+    console.error("Reset password error:", err.response?.data || err.message);
+    toast.error(err.response?.data?.message || "Error resetting password");
+  } finally {
+    setLoadingReset(false);
+  }
+};
+
 
   return (
     <div className="w-screen h-screen flex items-center justify-center relative">
