@@ -25,13 +25,12 @@ router.post('/new-password', resetPassword);
 // Google login
 router.post('/google', googleLogin);
 
-// ✅ Update profile (Cloudinary)
-router.post(
+router.put(
   '/update-profile',
-  protect,
   uploadAvatar.single('profilePic'),
   uploadToCloudinary('fixit/avatars'),
   updateProfile
 );
+
 
 export default router;
