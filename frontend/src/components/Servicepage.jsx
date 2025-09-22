@@ -53,7 +53,7 @@ const WorkerList = () => {
   const scrollContainer = useRef(null);
 
   // ⭐ NEW: temporary hardcoded admin flag
-  const isAdmin = true; // later replace with role from login/auth
+  const isAdmin = false; // later replace with role from login/auth
 
   const professions = [
     { name: "All", icon: Briefcase },

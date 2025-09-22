@@ -141,29 +141,30 @@ const BookingPage = () => {
       }
       
 
-      // // 6️⃣ In-app notification
-      // try {
-      //   await axios.post(
-      //     `${import.meta.env.VITE_API_URL}/api/notifications`,
-      //     {
-      //       workerId: worker._id,
-      //       message: `New booking from ${userName} for ${selectedIssue.label} at ${timeSlot}`,
-      //     },
-      //     { headers: getAuthHeaders() }
-      //   );
-      // } catch (err) {
-      //   console.warn("⚠️ Notification failed", err);
-      // }
+      // 6️⃣ In-app notification
+      try {
+        await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/notifications`,
+          {
+            workerId: worker._id,
+            message: `New booking from ${userName} for ${selectedIssue.label} at ${timeSlot}`,
+          },
+          { headers: getAuthHeaders() }
+        );
+      } catch (err) {
+        console.warn("⚠️ Notification failed", err);
+      }
 
-      // 7️⃣ Success
-      // toast.success("✅ Booking request submitted! Waiting for provider confirmation.");
-      // navigate(`/confirmation/${data.booking._id}`);
+// 7️⃣ Success
+toast.success("✅ Booking submitted! Worker has been notified via WhatsApp.");
+navigate("/bookingsubmitted"); // optional: a simple page confirming the booking
+
     } catch (err) {
       console.error("Booking error:", err.response || err);
       if (err.response?.status === 401 || err.response?.status === 403) {
         toast.error("❌ Token invalid or expired. Please login again.");
-        localStorage.removeItem("token");
-        navigate("/dashboard");
+        Cookies.remove("token");
+        
       } else if (err.response?.status === 400) {
         toast.error("❌ Booking failed. Invalid request data.");
       } else {

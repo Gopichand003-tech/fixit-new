@@ -17,8 +17,9 @@ import UpdateProfile from "./pages/UpdateProfiled";
 import TestimonialsCRUD from "./pages/Testimonials";
 import ProfilePicUpload from "./pages/Profilepage";
 import BookingPage from "./pages/BookingPage"; // ✅ Updated to use BookingPage
-import ConfirmationPage from "./pages/confirmation";
-// import Booking from "./pages/Bookings";
+// import ConfirmationPage from "./pages/confirmation";
+import MyBookings from "./pages/Mybookings";
+import BookingSubmitted from "./pages/bookingsubmitted";
 
 // Protected Route
 function ProtectedRoute({ children }) {
@@ -77,21 +78,22 @@ function App() {
             }
           />
           <Route
-            path="/confirmation"
+            path="/bookingsubmitted"
             element={
               <ProtectedLayout>
-                <ConfirmationPage />
+                <BookingSubmitted />
               </ProtectedLayout>
             }
           />
-          {/* <Route
-            path="/Bookings"
+
+          <Route
+            path="/Mybookings"
             element={
               <ProtectedLayout>
-                <Booking />
+                <MyBookings />
               </ProtectedLayout>
             }
-          /> */}
+          />
 
           {/* Workers */}
           <Route
