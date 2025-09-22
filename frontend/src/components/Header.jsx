@@ -70,6 +70,14 @@ const Header = () => {
       setMobileMenuOpen(false);
       return;
     }
+    
+   if (slug === "mybookings") {
+  navigate("/MyBookings"); // Use the correct route casing
+  return;
+}
+
+    
+    
 
     const targetId = idMap[slug];
     if (!targetId) return;
@@ -125,7 +133,7 @@ const handleNotificationClick = async () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex gap-10 items-center text-lg">
-            {["Home", "Find Services", "Quick Booking", "Testimonials"].map((label, idx) => (
+            {["Home", "Find Services", "Quick Booking", "Testimonials","Mybookings"].map((label, idx) => (
               <button
                 key={idx}
                 onClick={() => handleNavClick(label)}
@@ -190,7 +198,7 @@ const handleNotificationClick = async () => {
         {mobileMenuOpen && (
           <div className="md:hidden py-6 border-t border-zinc-200">
             <nav className="flex flex-col gap-5 text-lg">
-              {["Find Services", "Quick Booking", "Testimonials"].map((label, idx) => (
+              {["Find Services", "Quick Booking", "Testimonials","Mybookings"].map((label, idx) => (
                 <button key={idx} onClick={() => handleNavClick(label)} className="text-left text-zinc-700 hover:text-indigo-600">{label}</button>
               ))}
               <Button onClick={handleBecomeProvider} className="bg-gradient-to-tr from-pink-500 to-purple-600 text-white px-5 py-3 rounded-full">
