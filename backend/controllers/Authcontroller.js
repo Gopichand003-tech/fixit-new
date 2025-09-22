@@ -9,9 +9,7 @@ import { OAuth2Client } from 'google-auth-library';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 import streamifier from 'streamifier';
-
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
-
 
 /* ----------------------------- ENV Checks ----------------------------- */
 if (!process.env.JWT_SECRET) console.warn('⚠️ JWT_SECRET missing');
@@ -35,7 +33,7 @@ const signToken = (id, role = 'user') =>
 
 const absoluteUrl = (req, maybePath) => {
   if (!maybePath) return null;
-  if (/^https?:\/\//i.test(maybePath)) return maybePath; // already full URL
+  if (/^https?:\/\//i.test(maybePath)) return maybePath;
   const base = `${req.protocol}://${req.get('host')}`;
   return `${base}${maybePath.startsWith('/') ? '' : '/'}${maybePath}`;
 };
@@ -47,7 +45,7 @@ const publicUser = (req, userDoc) => ({
   profilePic: absoluteUrl(req, userDoc.profilePic),
 });
 
-/* --------------------------- Mail Transport --------------------------- */
+/* ---------------------------- Mail Transport --------------------------- */
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
@@ -60,13 +58,10 @@ transporter.verify()
 
 /* ---------------------------- Google Login ---------------------------- */
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
 export const googleLogin = async (req, res) => {
   try {
     const { token } = req.body;
     if (!token) return res.status(400).json({ message: 'Google token missing' });
-    if (!process.env.GOOGLE_CLIENT_ID)
-      return res.status(500).json({ message: 'Missing GOOGLE_CLIENT_ID' });
 
     const ticket = await googleClient.verifyIdToken({
       idToken: token,
@@ -75,16 +70,10 @@ export const googleLogin = async (req, res) => {
 
     const payload = ticket.getPayload();
     const { email, name, sub: googleId, picture } = payload;
-    let user = await User.findOne({ email: email.toLowerCase() });
 
+    let user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
-      user = await User.create({
-        name,
-        email: email.toLowerCase(),
-        googleId,
-        password: undefined,
-        profilePic: picture || null,
-      });
+      user = await User.create({ name, email: email.toLowerCase(), googleId, profilePic: picture || null });
     } else {
       let updated = false;
       if (!user.googleId) { user.googleId = googleId; updated = true; }
@@ -115,19 +104,10 @@ export const userSignup = async (req, res) => {
       return res.status(409).json({ message: 'User already exists' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({
-      name,
-      email: normalizedEmail,
-      password: hashedPassword,
-      profilePic: profilePic || null, // optional direct URL
-    });
+    const user = await User.create({ name, email: normalizedEmail, password: hashedPassword, profilePic: profilePic || null });
 
     const token = signToken(user._id);
-    return res.status(201).json({
-      message: 'User registered successfully',
-      token,
-      user: publicUser(req, user),
-    });
+    return res.status(201).json({ message: 'User registered successfully', token, user: publicUser(req, user) });
   } catch (err) {
     console.error('Signup error:', err);
     return res.status(500).json({ message: 'Server error' });
@@ -206,68 +186,44 @@ export const resetPassword = async (req, res) => {
   }
 };
 
+/* ---------------------------- Update Profile --------------------------- */
 export const updateProfile = async (req, res) => {
   try {
-    const { name } = req.body;
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    const { name, email } = req.body;
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     if (name) user.name = name;
+    if (email) user.email = email;
+
+    // Use Cloudinary URL from middleware
     if (req.file?.path) user.profilePic = req.file.path;
 
     await user.save();
-    res.json({ message: "Profile updated successfully", user: publicUser(req, user) });
+    res.status(200).json({ _id: user._id, name: user.name, email: user.email, profilePic: user.profilePic });
   } catch (err) {
-    console.error("updateProfile error:", err);
+    console.error("updateProfile error:", err.stack);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-
-/* ------------------------- Cloudinary Uploads ------------------------- */
-// Avatar Upload (Profile Pics)
-const avatarStorage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'fixit/avatars',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-    transformation: [{ width: 400, height: 400, crop: 'limit' }],
-  },
-});
-// export const uploadAvatar = multer({ storage: avatarStorage });
-
-// // Provider Uploads (Photos & Documents)
-// const providerStorage = new CloudinaryStorage({
-//   cloudinary,
-//   params: {
-//     folder: 'fixit/providers',
-//     allowed_formats: ['jpg', 'jpeg', 'png', 'pdf'],
-//     transformation: [{ width: 800, height: 800, crop: 'limit' }],
-//   },
-// });
-// export const uploadProviderFiles = multer({ storage: providerStorage });
-
-/* ---------------------------- Update Profile --------------------------- */
+/* ------------------------- Multer + Cloudinary ------------------------- */
 const storage = multer.memoryStorage();
 export const uploadAvatar = multer({ storage });
 
-// Middleware to upload to Cloudinary
 export const uploadToCloudinary = (folder) => async (req, res, next) => {
   if (!req.file) return next();
-
   try {
     const result = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         { folder, transformation: [{ width: 400, height: 400, crop: 'limit' }] },
-        (error, result) => {
-          if (error) return reject(error);
-          resolve(result);
-        }
+        (error, result) => error ? reject(error) : resolve(result)
       );
       streamifier.createReadStream(req.file.buffer).pipe(stream);
     });
-
-    req.file.path = result.secure_url; // store Cloudinary URL in req.file.path
+    req.file.path = result.secure_url;
     next();
   } catch (err) {
     console.error('Cloudinary upload error:', err);
