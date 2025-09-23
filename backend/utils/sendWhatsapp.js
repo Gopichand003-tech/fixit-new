@@ -13,14 +13,18 @@ export const sendWhatsapp = async (to, message, interactive) => {
   }
 
   try {
-    const payload = { from: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`, to: `whatsapp:${to}` };
+    const payload = {
+  from: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`,
+  to: `whatsapp:${to}`,
+};
 
-    if (interactive) {
-      payload.interactive = interactive;
-    } else {
-      if (!message) throw new Error("Missing 'message'");
-      payload.body = message;
-    }
+if (interactive) {
+  payload.content = { type: "interactive", interactive };
+} else {
+  if (!message) throw new Error("Missing 'message'");
+  payload.body = message;
+}
+
 
     const res = await client.messages.create(payload);
     console.log(`✅ WhatsApp sent to ${to}:`, res.sid);
