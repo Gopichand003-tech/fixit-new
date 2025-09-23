@@ -39,7 +39,7 @@ router.post("/", async (req, res) => {
     const booking = new Booking({
       workerId,
       workerName,
-      workerPhone,
+      workerPhone: workerPhone.trim(),
       issue,
       price,
       userId: req.user._id,
@@ -51,10 +51,11 @@ router.post("/", async (req, res) => {
       confirmationCode: crypto.randomBytes(6).toString("hex"),
       requestSentAt: new Date(),
     });
+
     await booking.save();
     console.log("📦 Booking saved:", booking._id);
 
-    // ✅ Send WhatsApp (plain text) to worker
+    // ✅ Send WhatsApp (plain text) to worker if valid
     const msg = `🔔 New Booking Request
 Issue: ${booking.issue}
 Price: ₹${booking.price}
@@ -64,25 +65,15 @@ Time Slot: ${booking.timeSlot}
 
 Please contact the user to confirm.`;
 
-    try {
-      await sendWhatsapp(workerPhone, msg);
-      console.log(`✅ WhatsApp sent to worker ${workerPhone}`);
-    } catch (err) {
-      console.error("❌ Worker WhatsApp failed:", err);
-    }
-
-    // Optional: in-app notification (can keep or remove)
-    try {
-      await axios.post(
-        `${process.env.VITE_API_URL}/api/notifications`,
-        {
-          workerId: worker._id,
-          message: `New booking from ${userName} for ${issue} at ${timeSlot}`,
-        },
-        { headers: { Authorization: `Bearer ${req.cookies.token}` } }
-      );
-    } catch (err) {
-      console.warn("⚠️ Notification failed", err);
+    if (booking.workerPhone && /^\+\d{10,15}$/.test(booking.workerPhone)) {
+      try {
+        await sendWhatsapp(booking.workerPhone, msg);
+        console.log(`✅ WhatsApp sent to worker ${booking.workerPhone}`);
+      } catch (err) {
+        console.error("❌ Worker WhatsApp failed:", err);
+      }
+    } else {
+      console.warn("❌ Skipping WhatsApp: invalid workerPhone", booking.workerPhone);
     }
 
     res.status(201).json({
@@ -95,21 +86,25 @@ Please contact the user to confirm.`;
   }
 });
 
-// GET /api/bookings → fetch bookings only for logged-in user
+// GET /api/bookings → fetch bookings only for logged-in user, exclude cancelled
 router.get("/", protect, async (req, res) => {
   try {
-    const bookings = await Booking.find({ userId: req.user._id }).sort({ createdAt: -1 });
+    const bookings = await Booking.find({
+      userId: req.user._id,
+      status: { $ne: "user-cancelled" }, // exclude cancelled
+    }).sort({ createdAt: -1 });
+
     res.json({ bookings });
   } catch (err) {
     console.error("Fetch bookings error:", err);
     res.status(500).json({ error: "Failed to fetch bookings" });
   }
 });
+
 // PATCH /api/bookings/:id/cancel
 router.patch("/:id/cancel", protect, async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id);
-
     if (!booking) return res.status(404).json({ error: "Booking not found" });
 
     // Only the user who booked can cancel
@@ -120,17 +115,21 @@ router.patch("/:id/cancel", protect, async (req, res) => {
     booking.status = "user-cancelled";
     await booking.save();
 
-    // ✅ Send WhatsApp to worker about cancellation
+    // ✅ Send WhatsApp to worker if valid
     const msg = `❌ Booking Cancelled by User
 Issue: ${booking.issue}
 User: ${booking.userName} (${booking.userPhone})
 Time Slot: ${booking.timeSlot}`;
 
-    try {
-      await sendWhatsapp(booking.workerPhone, msg);
-      console.log(`✅ WhatsApp sent to worker ${booking.workerPhone} about cancellation`);
-    } catch (err) {
-      console.error("❌ Worker WhatsApp failed:", err);
+    if (booking.workerPhone && /^\+\d{10,15}$/.test(booking.workerPhone)) {
+      try {
+        await sendWhatsapp(booking.workerPhone, msg);
+        console.log(`✅ WhatsApp sent to worker ${booking.workerPhone} about cancellation`);
+      } catch (err) {
+        console.error("❌ Worker WhatsApp failed:", err);
+      }
+    } else {
+      console.warn("❌ Skipping cancellation WhatsApp: invalid workerPhone", booking.workerPhone);
     }
 
     res.json({ message: "Booking cancelled successfully", booking });
@@ -139,7 +138,5 @@ Time Slot: ${booking.timeSlot}`;
     res.status(500).json({ error: "Failed to cancel booking" });
   }
 });
-
-
 
 export default router;
