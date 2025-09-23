@@ -105,7 +105,6 @@ router.get("/", protect, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch bookings" });
   }
 });
-
 // PATCH /api/bookings/:id/cancel
 router.patch("/:id/cancel", protect, async (req, res) => {
   try {
@@ -120,6 +119,19 @@ router.patch("/:id/cancel", protect, async (req, res) => {
     // Update status
     booking.status = "user-cancelled";
     await booking.save();
+
+    // ✅ Send WhatsApp to worker about cancellation
+    const msg = `❌ Booking Cancelled by User
+Issue: ${booking.issue}
+User: ${booking.userName} (${booking.userPhone})
+Time Slot: ${booking.timeSlot}`;
+
+    try {
+      await sendWhatsapp(booking.workerPhone, msg);
+      console.log(`✅ WhatsApp sent to worker ${booking.workerPhone} about cancellation`);
+    } catch (err) {
+      console.error("❌ Worker WhatsApp failed:", err);
+    }
 
     res.json({ message: "Booking cancelled successfully", booking });
   } catch (err) {
