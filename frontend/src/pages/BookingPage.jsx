@@ -113,52 +113,44 @@ const BookingPage = () => {
 
     console.log("🚀 Sending booking request to:", import.meta.env.VITE_API_URL);
     console.log("📦 Booking payload:", bookingData);
+    
+try {
+  const res = await axios.post(
+    `${import.meta.env.VITE_API_URL}/api/bookings`,
+    bookingData,
+    { headers: getAuthHeaders() }
+  );
 
-    try {
-      const res = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/bookings`,
-        bookingData,
-        { headers: getAuthHeaders() }
-      );
+  console.log("✅ Booking API Response:", res.data);
+  toast.success("✅ Booking submitted! Worker will be notified via WhatsApp.");
 
-      console.log("✅ Booking API Response:", res.data);
+  // Optional: in-app notification
+  try {
+    await axios.post(
+      `${import.meta.env.VITE_API_URL}/api/notifications`,
+      {
+        workerId: worker._id,
+        message: `New booking from ${userName} for ${selectedIssue.label} at ${timeSlot}`,
+      },
+      { headers: getAuthHeaders() }
+    );
+  } catch (err) {
+    console.warn("⚠️ Notification failed", err);
+  }
 
-      if (res.data?.whatsappStatus === "failed") {
-        setWhatsappStatus("failed");
-        console.error("❌ WhatsApp send failed:", res.data?.whatsappError);
-        toast.error("⚠️ Booking saved but WhatsApp message failed.");
-      } else {
-        setWhatsappStatus("success");
-        toast.success("✅ Booking submitted! Worker notified via WhatsApp.");
-      }
-
-      // Optional: in-app notification
-      try {
-        await axios.post(
-          `${import.meta.env.VITE_API_URL}/api/notifications`,
-          {
-            workerId: worker._id,
-            message: `New booking from ${userName} for ${selectedIssue.label} at ${timeSlot}`,
-          },
-          { headers: getAuthHeaders() }
-        );
-      } catch (err) {
-        console.warn("⚠️ Notification failed", err);
-      }
-
-      navigate("/bookingsubmitted");
-    } catch (err) {
-      console.error("❌ Booking error:", err.response?.data || err);
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        toast.error("❌ Token invalid or expired. Please login again.");
-        Cookies.remove("token");
-      } else if (err.response?.status === 400) {
-        toast.error("❌ Booking failed. Invalid request data.");
-      } else {
-        toast.error("❌ Booking failed. Please try again later.");
-      }
-    }
-  };
+  navigate("/bookingsubmitted");
+} catch (err) {
+  console.error("❌ Booking error:", err.response?.data || err);
+  if (err.response?.status === 401 || err.response?.status === 403) {
+    toast.error("❌ Token invalid or expired. Please login again.");
+    Cookies.remove("token");
+  } else if (err.response?.status === 400) {
+    toast.error("❌ Booking failed. Invalid request data.");
+  } else {
+    toast.error("❌ Booking failed. Please try again later.");
+  }
+}
+  }
 
   const isFormValid =
     userName.trim() &&
