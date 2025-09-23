@@ -9,7 +9,6 @@ const statusColors = {
   "worker-accepted": "bg-green-100 text-green-800",
   "worker-rejected": "bg-red-100 text-red-800",
   "confirmed": "bg-teal-100 text-teal-800",
-  "user-cancelled": "bg-gray-200 text-gray-800 line-through",
   "completed": "bg-purple-100 text-purple-800",
 };
 
@@ -19,12 +18,12 @@ const MyBookings = () => {
   const fetchBookings = async () => {
     try {
       const token = Cookies.get("token");
-      if (!token) return;
-
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/bookings`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setBookings(res.data.bookings);
+      // ✅ Filter out cancelled bookings
+      const activeBookings = res.data.bookings.filter(b => b.status !== "user-cancelled");
+      setBookings(activeBookings);
     } catch (err) {
       console.error("Error fetching bookings:", err.response?.data || err.message);
     }
@@ -40,7 +39,7 @@ const MyBookings = () => {
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      fetchBookings(); // Refresh after cancel
+      fetchBookings(); // Refresh list
     } catch (err) {
       console.error("Cancel booking error:", err.response?.data || err.message);
     }
@@ -52,9 +51,7 @@ const MyBookings = () => {
 
   return (
     <div className="p-6 min-h-screen bg-gradient-to-r from-green-50 via-teal-50 to-green-50">
-      <h2 className="text-3xl font-extrabold text-gray-900 mb-6 text-center">
-        My Bookings
-      </h2>
+      <h2 className="text-3xl font-extrabold mb-6 text-center">My Bookings</h2>
       {bookings.length === 0 ? (
         <p className="text-center text-gray-500 text-lg">No bookings found.</p>
       ) : (
@@ -76,15 +73,13 @@ const MyBookings = () => {
               </div>
 
               <div className="flex justify-between items-center">
-                {/* Status Badge */}
                 <span
                   className={`px-3 py-1 rounded-full text-sm font-semibold ${statusColors[b.status] || "bg-gray-100 text-gray-700"}`}
                 >
-                  {b.status.replace("user-", "").replace("-", " ")}
+                  {b.status.replace("-", " ")}
                 </span>
 
-                {/* Cancel Button */}
-                {b.status !== "user-cancelled" && b.status !== "completed" && (
+                {(b.status !== "completed") && (
                   <button
                     onClick={() => cancelBooking(b._id)}
                     className="flex items-center gap-1 px-3 py-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
