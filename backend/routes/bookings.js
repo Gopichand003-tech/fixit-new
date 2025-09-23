@@ -95,15 +95,31 @@ Please contact the user to confirm.`;
   }
 });
 
-// GET /api/bookings
-router.get("/", async (req, res) => {
+// GET /api/bookings → fetch bookings only for logged-in user
+router.get("/", protect, async (req, res) => {
   try {
-    const bookings = await Booking.find({ userId: req.user._id })
-      .sort({ createdAt: -1 }); // latest first
+    const bookings = await Booking.find({ userId: req.user._id }).sort({ createdAt: -1 });
     res.json({ bookings });
-  } catch (error) {
-    console.error("Fetch bookings error:", error);
+  } catch (err) {
+    console.error("Fetch bookings error:", err);
     res.status(500).json({ error: "Failed to fetch bookings" });
+  }
+});
+
+// PATCH /api/bookings/:id/cancel → cancel a booking
+router.patch("/:id/cancel", protect, async (req, res) => {
+  try {
+    const booking = await Booking.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!booking) return res.status(404).json({ error: "Booking not found" });
+
+    booking.status = "cancelled";
+    booking.cancelledAt = new Date();
+    await booking.save();
+
+    res.json({ message: "Booking cancelled", booking });
+  } catch (err) {
+    console.error("Cancel booking error:", err);
+    res.status(500).json({ error: "Failed to cancel booking" });
   }
 });
 
