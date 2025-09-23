@@ -106,22 +106,28 @@ router.get("/", protect, async (req, res) => {
   }
 });
 
-// PATCH /api/bookings/:id/cancel → cancel a booking
+// PATCH /api/bookings/:id/cancel
 router.patch("/:id/cancel", protect, async (req, res) => {
   try {
-    const booking = await Booking.findOne({ _id: req.params.id, userId: req.user._id });
+    const booking = await Booking.findById(req.params.id);
+
     if (!booking) return res.status(404).json({ error: "Booking not found" });
 
-    booking.status = "cancelled";
-    booking.cancelledAt = new Date();
+    // Only the user who booked can cancel
+    if (booking.userId.toString() !== req.user._id.toString())
+      return res.status(403).json({ error: "Not authorized to cancel this booking" });
+
+    // Update status
+    booking.status = "user-cancelled";
     await booking.save();
 
-    res.json({ message: "Booking cancelled", booking });
+    res.json({ message: "Booking cancelled successfully", booking });
   } catch (err) {
     console.error("Cancel booking error:", err);
     res.status(500).json({ error: "Failed to cancel booking" });
   }
 });
+
 
 
 export default router;
