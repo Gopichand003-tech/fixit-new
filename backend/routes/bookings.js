@@ -55,7 +55,10 @@ router.post("/", async (req, res) => {
     await booking.save();
     console.log("📦 Booking saved:", booking._id);
 
-    // ✅ Send WhatsApp (plain text) to worker if valid
+    // ✅ Send WhatsApp (plain text) to worker
+    let whatsappStatus = "success";
+    let whatsappError = null;
+
     const msg = `🔔 New Booking Request
 Issue: ${booking.issue}
 Price: ₹${booking.price}
@@ -71,14 +74,20 @@ Please contact the user to confirm.`;
         console.log(`✅ WhatsApp sent to worker ${booking.workerPhone}`);
       } catch (err) {
         console.error("❌ Worker WhatsApp failed:", err);
+        whatsappStatus = "failed";
+        whatsappError = err.message || err;
       }
     } else {
       console.warn("❌ Skipping WhatsApp: invalid workerPhone", booking.workerPhone);
+      whatsappStatus = "failed";
+      whatsappError = "Invalid worker phone number";
     }
 
     res.status(201).json({
-      message: "Booking created & WhatsApp sent to worker",
+      message: "Booking created",
       booking,
+      whatsappStatus,
+      whatsappError,
     });
   } catch (error) {
     console.error("Booking error:", error);
@@ -107,15 +116,15 @@ router.patch("/:id/cancel", protect, async (req, res) => {
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ error: "Booking not found" });
 
-    // Only the user who booked can cancel
     if (booking.userId.toString() !== req.user._id.toString())
       return res.status(403).json({ error: "Not authorized to cancel this booking" });
 
-    // Update status
     booking.status = "user-cancelled";
     await booking.save();
 
-    // ✅ Send WhatsApp to worker if valid
+    let whatsappStatus = "success";
+    let whatsappError = null;
+
     const msg = `❌ Booking Cancelled by User
 Issue: ${booking.issue}
 User: ${booking.userName} (${booking.userPhone})
@@ -127,12 +136,21 @@ Time Slot: ${booking.timeSlot}`;
         console.log(`✅ WhatsApp sent to worker ${booking.workerPhone} about cancellation`);
       } catch (err) {
         console.error("❌ Worker WhatsApp failed:", err);
+        whatsappStatus = "failed";
+        whatsappError = err.message || err;
       }
     } else {
       console.warn("❌ Skipping cancellation WhatsApp: invalid workerPhone", booking.workerPhone);
+      whatsappStatus = "failed";
+      whatsappError = "Invalid worker phone number";
     }
 
-    res.json({ message: "Booking cancelled successfully", booking });
+    res.json({
+      message: "Booking cancelled successfully",
+      booking,
+      whatsappStatus,
+      whatsappError,
+    });
   } catch (err) {
     console.error("Cancel booking error:", err);
     res.status(500).json({ error: "Failed to cancel booking" });

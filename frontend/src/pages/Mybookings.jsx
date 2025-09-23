@@ -1,7 +1,9 @@
+// pages/MyBookings.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Cookies from "js-cookie";
 import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 const statusColors = {
   "request-sent": "bg-yellow-100 text-yellow-800",
@@ -15,22 +17,27 @@ const statusColors = {
 const MyBookings = () => {
   const [bookings, setBookings] = useState([]);
 
+  // Fetch bookings from backend
   const fetchBookings = async () => {
     try {
       const token = Cookies.get("token");
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/bookings`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      // ✅ Filter out cancelled bookings
       const activeBookings = res.data.bookings.filter(b => b.status !== "user-cancelled");
       setBookings(activeBookings);
     } catch (err) {
       console.error("Error fetching bookings:", err.response?.data || err.message);
+      toast.error("❌ Failed to fetch bookings. Try again later.");
     }
   };
 
+  // Cancel booking
   const cancelBooking = async (id) => {
     if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+
+    // Optimistic UI update
+    setBookings(prev => prev.filter(b => b._id !== id));
 
     try {
       const token = Cookies.get("token");
@@ -39,9 +46,12 @@ const MyBookings = () => {
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      fetchBookings(); // Refresh list
+      toast.success("❌ Booking cancelled. Worker has been notified via WhatsApp.");
     } catch (err) {
       console.error("Cancel booking error:", err.response?.data || err.message);
+      toast.error("❌ Failed to cancel booking. Please try again.");
+      // Re-fetch to sync state
+      fetchBookings();
     }
   };
 
@@ -49,9 +59,16 @@ const MyBookings = () => {
     fetchBookings();
   }, []);
 
+  const formatStatus = (status) =>
+    status
+      .split("-")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+
   return (
     <div className="p-6 min-h-screen bg-gradient-to-r from-green-50 via-teal-50 to-green-50">
       <h2 className="text-3xl font-extrabold mb-6 text-center">My Bookings</h2>
+
       {bookings.length === 0 ? (
         <p className="text-center text-gray-500 text-lg">No bookings found.</p>
       ) : (
@@ -74,12 +91,14 @@ const MyBookings = () => {
 
               <div className="flex justify-between items-center">
                 <span
-                  className={`px-3 py-1 rounded-full text-sm font-semibold ${statusColors[b.status] || "bg-gray-100 text-gray-700"}`}
+                  className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                    statusColors[b.status] || "bg-gray-100 text-gray-700"
+                  }`}
                 >
-                  {b.status.replace("-", " ")}
+                  {formatStatus(b.status)}
                 </span>
 
-                {(b.status !== "completed") && (
+                {b.status !== "completed" && (
                   <button
                     onClick={() => cancelBooking(b._id)}
                     className="flex items-center gap-1 px-3 py-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
