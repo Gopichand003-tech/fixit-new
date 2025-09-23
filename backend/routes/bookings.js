@@ -95,4 +95,17 @@ Please contact the user to confirm.`;
   }
 });
 
+// GET /api/bookings
+router.get("/", async (req, res) => {
+  try {
+    const bookings = await Booking.find({ userId: req.user._id })
+      .sort({ createdAt: -1 }); // latest first
+    res.json({ bookings });
+  } catch (error) {
+    console.error("Fetch bookings error:", error);
+    res.status(500).json({ error: "Failed to fetch bookings" });
+  }
+});
+
+
 export default router;

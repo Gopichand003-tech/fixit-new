@@ -6,72 +6,60 @@ const MyBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchBookings = async () => {
-      const token = Cookies.get("token");
-      console.log("Token from cookie:", token);
+  const getAuthHeaders = () => {
+    const token = Cookies.get("token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
 
-      try {
-      // 4️⃣ Save booking
-      const { data } = await axios.get(
+  const fetchBookings = async () => {
+    try {
+      const res = await axios.get(
         `${import.meta.env.VITE_API_URL}/api/bookings`,
-        bookingData,
         { headers: getAuthHeaders() }
       );
 
-        console.log("Bookings from API:", data.bookings);
-        setBookings(data.bookings || []);
-      } catch (err) {
-        console.error("Error fetching bookings:", err.response?.data || err.message);
-        setBookings([]); // fallback to empty
-      } finally {
-        setLoading(false);
-      }
-    };
+      // Make sure you use the correct key from the backend
+      // If backend sends { bookings: [...] } then use res.data.bookings
+      setBookings(res.data.bookings || []);
+    } catch (err) {
+      console.error("Error fetching bookings:", err.response?.data || err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchBookings();
   }, []);
 
-  return (
-    <div className="min-h-screen p-6 bg-green-50">
-      <h1 className="text-3xl font-bold text-green-700 mb-6">My Bookings</h1>
+  if (loading) return <p>Loading your bookings...</p>;
 
-      {loading ? (
-        <p className="text-gray-700">Loading your bookings...</p>
-      ) : bookings.length === 0 ? (
-        <p className="text-gray-700">You have no bookings yet.</p>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {bookings.map((b) => (
-            <div
-              key={b._id}
-              className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition"
-            >
-              <h2 className="font-semibold text-xl text-green-700">
-                {b.workerName}
-              </h2>
-              <p className="text-gray-700 mt-1">
-                Issue: <span className="font-medium">{b.issue}</span>
+  if (!bookings.length)
+    return <p>No bookings found. Make a booking first!</p>;
+
+  return (
+    <div className="p-6">
+      <h2 className="text-2xl font-bold mb-4">My Bookings</h2>
+      <ul className="space-y-4">
+        {bookings.map((b) => (
+          <li
+            key={b._id}
+            className="p-4 border rounded-lg shadow-sm flex justify-between"
+          >
+            <div>
+              <p>
+                <strong>Worker:</strong> {b.workerName} ({b.workerPhone})
               </p>
-              <p className="text-gray-700 mt-1">
-                Time Slot: <span className="font-medium">{b.timeSlot}</span>
+              <p>
+                <strong>Issue:</strong> {b.issue} | <strong>Price:</strong> ₹{b.price}
               </p>
-              <p className="text-gray-700 mt-1">
-                Amount: <span className="font-medium">₹{b.price}</span>
-              </p>
-              <p
-                className={`mt-2 font-semibold ${
-                  b.status.toLowerCase() === "confirmed"
-                    ? "text-green-600"
-                    : "text-orange-600"
-                }`}
-              >
-                Status: {b.status || "Pending"}
+              <p>
+                <strong>Time Slot:</strong> {b.timeSlot} | <strong>Status:</strong> {b.status}
               </p>
             </div>
-          ))}
-        </div>
-      )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
