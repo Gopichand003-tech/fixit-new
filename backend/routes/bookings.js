@@ -15,14 +15,28 @@ router.use(protect);
  */
 router.post("/", async (req, res) => {
   try {
-    const { workerId, workerName, workerPhone, issue, price, userName, userPhone, userAddress, timeSlot } = req.body;
+    const {
+      workerId,
+      workerName,
+      workerPhone,
+      issue,
+      price,
+      userName,
+      userPhone,
+      userAddress,
+      timeSlot,
+    } = req.body;
 
     // Basic validation
-    if (!workerId || !workerName || !workerPhone || !issue || !price || !userName || !userPhone || !userAddress || !timeSlot) {
+    if (
+      !workerId || !workerName || !workerPhone ||
+      !issue || !price || !userName || !userPhone ||
+      !userAddress || !timeSlot
+    ) {
       return res.status(400).json({ error: "All fields are required" });
     }
 
-    const bookingData = {
+    const booking = new Booking({
       workerId,
       workerName,
       workerPhone,
@@ -36,12 +50,10 @@ router.post("/", async (req, res) => {
       status: "request-sent",
       confirmationCode: crypto.randomBytes(6).toString("hex"),
       requestSentAt: new Date(),
-    };
-
-    const booking = new Booking(bookingData);
+    });
     await booking.save();
 
-    // ✅ Interactive WhatsApp buttons for worker
+    // ✅ Build Twilio interactive button payload
     const interactiveButtons = {
       type: "button",
       body: {
@@ -52,16 +64,17 @@ User: ${booking.userName} (${booking.userPhone})
 Address: ${booking.userAddress}
 Time Slot: ${booking.timeSlot}
 
-Please confirm:` 
+Please confirm:`.trim(),
       },
       action: {
         buttons: [
           { type: "reply", reply: { id: `accept_${booking._id}`, title: "✅ Accept" } },
-          { type: "reply", reply: { id: `reject_${booking._id}`, title: "❌ Reject" } }
-        ]
-      }
+          { type: "reply", reply: { id: `reject_${booking._id}`, title: "❌ Reject" } },
+        ],
+      },
     };
 
+    // ✅ Send interactive WhatsApp to worker
     try {
       await sendWhatsapp(workerPhone, null, interactiveButtons);
       console.log("✅ Interactive WhatsApp sent to worker");
@@ -69,7 +82,10 @@ Please confirm:`
       console.error("❌ Worker WhatsApp failed:", err);
     }
 
-    res.status(201).json({ message: "Booking created & request sent to worker", booking });
+    res.status(201).json({
+      message: "Booking created & request sent to worker",
+      booking,
+    });
   } catch (error) {
     console.error("Booking error:", error);
     res.status(500).json({ error: "Failed to save booking" });
@@ -80,48 +96,50 @@ Please confirm:`
  * POST /api/bookings/whatsapp-reply
  * Webhook endpoint for Twilio button replies
  */
-router.post("/whatsapp-reply", express.urlencoded({ extended: false }), async (req, res) => {
-  try {
-    const { WaId, ButtonId } = req.body; 
-    console.log("Incoming WhatsApp reply:", req.body);
-
-    // Find booking based on WhatsApp number
-    const booking = await Booking.findOne({ workerPhone: WaId });
-    if (!booking) return res.status(404).send("Booking not found");
-
-    // Determine status from button pressed
-    if (ButtonId.startsWith("accept_")) {
-      booking.status = "worker-accepted";
-    } else if (ButtonId.startsWith("reject_")) {
-      booking.status = "worker-rejected";
-    } else {
-      booking.status = "pending";
-    }
-
-    booking.decisionAt = new Date();
-    await booking.save();
-
-    // Notify user about booking status
-    const msg = booking.status === "worker-accepted"
-      ? `✅ Your booking for *${booking.issue}* has been accepted by ${booking.workerName}.`
-      : `❌ Your booking for *${booking.issue}* was rejected by ${booking.workerName}.`;
-
+router.post(
+  "/whatsapp-reply",
+  express.urlencoded({ extended: false }),
+  async (req, res) => {
     try {
-      await sendWhatsapp(booking.userPhone, msg);
+      const { WaId, ButtonId } = req.body; // Twilio webhook fields
+      console.log("Incoming WhatsApp reply:", req.body);
+
+      const booking = await Booking.findOne({ workerPhone: WaId });
+      if (!booking) return res.status(404).send("Booking not found");
+
+      // Update booking status based on button pressed
+      if (ButtonId?.startsWith("accept_")) {
+        booking.status = "worker-accepted";
+      } else if (ButtonId?.startsWith("reject_")) {
+        booking.status = "worker-rejected";
+      } else {
+        booking.status = "pending";
+      }
+      booking.decisionAt = new Date();
+      await booking.save();
+
+      // Notify user
+      const msg =
+        booking.status === "worker-accepted"
+          ? `✅ Your booking for *${booking.issue}* has been accepted by ${booking.workerName}.`
+          : `❌ Your booking for *${booking.issue}* was rejected by ${booking.workerName}.`;
+
+      try {
+        await sendWhatsapp(booking.userPhone, msg);
+      } catch (err) {
+        console.error("❌ User WhatsApp failed:", err);
+      }
+
+      // Twilio expects empty XML response
+      res.type("text/xml").send("<Response></Response>");
     } catch (err) {
-      console.error("User WhatsApp failed:", err);
+      console.error("WhatsApp reply error:", err);
+      res.status(500).send("Server Error");
     }
-
-    // Respond with empty Twilio XML
-    res.send("<Response></Response>");
-  } catch (err) {
-    console.error("WhatsApp reply error:", err);
-    res.status(500).send("Server Error");
   }
-});
+);
 
-// ----------- Keep all your existing routes below unchanged -----------
-
+// Existing GET/PATCH routes remain unchanged
 router.get("/", async (req, res) => {
   try {
     const bookings = await Booking.find({ userId: req.user._id }).sort({ createdAt: -1 });
@@ -131,7 +149,5 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch bookings" });
   }
 });
-
-// ... PATCH routes for worker view, accept, reject, confirm, status
 
 export default router;
