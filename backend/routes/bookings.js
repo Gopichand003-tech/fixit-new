@@ -52,101 +52,46 @@ router.post("/", async (req, res) => {
       requestSentAt: new Date(),
     });
     await booking.save();
+    console.log("📦 Booking saved:", booking._id);
 
-    // ✅ Build Twilio interactive button payload
-    const interactiveButtons = {
-      type: "button",
-      body: {
-        text: `🔔 New Booking Request
+    // ✅ Send WhatsApp (plain text) to worker
+    const msg = `🔔 New Booking Request
 Issue: ${booking.issue}
 Price: ₹${booking.price}
 User: ${booking.userName} (${booking.userPhone})
 Address: ${booking.userAddress}
 Time Slot: ${booking.timeSlot}
 
-Please confirm:`.trim(),
-      },
-      action: {
-        buttons: [
-          { type: "reply", reply: { id: `accept_${booking._id}`, title: "✅ Accept" } },
-          { type: "reply", reply: { id: `reject_${booking._id}`, title: "❌ Reject" } },
-        ],
-      },
-    };
+Please contact the user to confirm.`;
 
-    // ✅ Send interactive WhatsApp to worker
     try {
-      await sendWhatsapp(workerPhone, null, interactiveButtons);
-      console.log("✅ Interactive WhatsApp sent to worker");
+      await sendWhatsapp(workerPhone, msg);
+      console.log(`✅ WhatsApp sent to worker ${workerPhone}`);
     } catch (err) {
       console.error("❌ Worker WhatsApp failed:", err);
     }
 
+    // Optional: in-app notification (can keep or remove)
+    try {
+      await axios.post(
+        `${process.env.VITE_API_URL}/api/notifications`,
+        {
+          workerId: worker._id,
+          message: `New booking from ${userName} for ${issue} at ${timeSlot}`,
+        },
+        { headers: { Authorization: `Bearer ${req.cookies.token}` } }
+      );
+    } catch (err) {
+      console.warn("⚠️ Notification failed", err);
+    }
+
     res.status(201).json({
-      message: "Booking created & request sent to worker",
+      message: "Booking created & WhatsApp sent to worker",
       booking,
     });
   } catch (error) {
     console.error("Booking error:", error);
     res.status(500).json({ error: "Failed to save booking" });
-  }
-});
-
-/**
- * POST /api/bookings/whatsapp-reply
- * Webhook endpoint for Twilio button replies
- */
-router.post(
-  "/whatsapp-reply",
-  express.urlencoded({ extended: false }),
-  async (req, res) => {
-    try {
-      const { WaId, ButtonId } = req.body; // Twilio webhook fields
-      console.log("Incoming WhatsApp reply:", req.body);
-
-      const booking = await Booking.findOne({ workerPhone: WaId });
-      if (!booking) return res.status(404).send("Booking not found");
-
-      // Update booking status based on button pressed
-      if (ButtonId?.startsWith("accept_")) {
-        booking.status = "worker-accepted";
-      } else if (ButtonId?.startsWith("reject_")) {
-        booking.status = "worker-rejected";
-      } else {
-        booking.status = "pending";
-      }
-      booking.decisionAt = new Date();
-      await booking.save();
-
-      // Notify user
-      const msg =
-        booking.status === "worker-accepted"
-          ? `✅ Your booking for *${booking.issue}* has been accepted by ${booking.workerName}.`
-          : `❌ Your booking for *${booking.issue}* was rejected by ${booking.workerName}.`;
-
-      try {
-        await sendWhatsapp(booking.userPhone, msg);
-      } catch (err) {
-        console.error("❌ User WhatsApp failed:", err);
-      }
-
-      // Twilio expects empty XML response
-      res.type("text/xml").send("<Response></Response>");
-    } catch (err) {
-      console.error("WhatsApp reply error:", err);
-      res.status(500).send("Server Error");
-    }
-  }
-);
-
-// Existing GET/PATCH routes remain unchanged
-router.get("/", async (req, res) => {
-  try {
-    const bookings = await Booking.find({ userId: req.user._id }).sort({ createdAt: -1 });
-    res.json({ bookings });
-  } catch (error) {
-    console.error("Fetch bookings error:", error);
-    res.status(500).json({ error: "Failed to fetch bookings" });
   }
 });
 
