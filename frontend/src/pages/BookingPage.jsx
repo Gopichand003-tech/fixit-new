@@ -123,23 +123,40 @@ const BookingPage = () => {
         { headers: getAuthHeaders() }
       );
 
-      // 5️⃣ WhatsApp notification
-      try {
-        const workerNumber = bookingData.workerPhone;
-        const message = `Hi ${worker.name}, you have a new booking from ${userName} for ${selectedIssue.label} at ${timeSlot}. Please confirm.`;
+     // 5️⃣ WhatsApp notification
+try {
+  const workerNumber = bookingData.workerPhone;
 
-        await axios.post(
-          `${import.meta.env.VITE_API_URL}/api/tasks/send-whatsapp`,
-          { workerNumber, taskMessage: message },
-          { headers: getAuthHeaders() }
-        );
+  const interactiveButtons = {
+    type: "button",
+    body: {
+      text: `🔔 New Booking Request
+Issue: ${selectedIssue.label}
+Price: ₹${selectedIssue.price}
+User: ${userName} (${userPhone})
+Address: ${userAddress}
+Time Slot: ${timeSlot}
 
-        console.log("✅ WhatsApp notification sent");
-         navigate("/dashboard");
-      } catch (err) {
-        console.warn("⚠️ WhatsApp notification failed:", err?.response?.data || err);
-      }
-      
+Please confirm:`
+    },
+    action: {
+      buttons: [
+        { type: "reply", reply: { id: `accept_${data.booking._id}`, title: "✅ Accept" } },
+        { type: "reply", reply: { id: `reject_${data.booking._id}`, title: "❌ Reject" } }
+      ]
+    }
+  };
+
+  await axios.post(
+    `${import.meta.env.VITE_API_URL}/api/bookings/send-whatsapp`,
+    { workerNumber, interactive: interactiveButtons },
+    { headers: getAuthHeaders() }
+  );
+
+  console.log("✅ WhatsApp interactive buttons sent");
+} catch (err) {
+  console.warn("⚠️ WhatsApp notification failed:", err?.response?.data || err);
+}
 
       // 6️⃣ In-app notification
       try {
