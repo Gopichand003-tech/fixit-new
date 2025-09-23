@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Cookies from "js-cookie";
+import { Trash2 } from "lucide-react";
+
+const statusColors = {
+  "request-sent": "bg-yellow-100 text-yellow-800",
+  "worker-viewed": "bg-blue-100 text-blue-800",
+  "worker-accepted": "bg-green-100 text-green-800",
+  "worker-rejected": "bg-red-100 text-red-800",
+  "confirmed": "bg-teal-100 text-teal-800",
+  "user-cancelled": "bg-gray-200 text-gray-800 line-through",
+  "completed": "bg-purple-100 text-purple-800",
+};
 
 const MyBookings = () => {
   const [bookings, setBookings] = useState([]);
@@ -8,6 +19,8 @@ const MyBookings = () => {
   const fetchBookings = async () => {
     try {
       const token = Cookies.get("token");
+      if (!token) return;
+
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/bookings`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -19,15 +32,15 @@ const MyBookings = () => {
 
   const cancelBooking = async (id) => {
     if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+
     try {
       const token = Cookies.get("token");
-      const res = await axios.patch(
+      await axios.patch(
         `${import.meta.env.VITE_API_URL}/api/bookings/${id}/cancel`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      console.log(res.data.message);
-      fetchBookings(); // Refresh list
+      fetchBookings(); // Refresh after cancel
     } catch (err) {
       console.error("Cancel booking error:", err.response?.data || err.message);
     }
@@ -38,32 +51,51 @@ const MyBookings = () => {
   }, []);
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">My Bookings</h2>
+    <div className="p-6 min-h-screen bg-gradient-to-r from-green-50 via-teal-50 to-green-50">
+      <h2 className="text-3xl font-extrabold text-gray-900 mb-6 text-center">
+        My Bookings
+      </h2>
       {bookings.length === 0 ? (
-        <p>No bookings found.</p>
+        <p className="text-center text-gray-500 text-lg">No bookings found.</p>
       ) : (
-        <ul className="space-y-4">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {bookings.map((b) => (
-            <li key={b._id} className="p-4 border rounded-lg flex justify-between items-center">
-              <div>
-                <p>
-                  <strong>{b.issue}</strong> - ₹{b.price}
+            <div
+              key={b._id}
+              className="relative bg-white rounded-3xl shadow-xl p-6 flex flex-col justify-between transition-transform hover:scale-105"
+            >
+              <div className="mb-4">
+                <h3 className="text-xl font-bold text-gray-800">{b.issue}</h3>
+                <p className="text-gray-600 mt-1">₹{b.price}</p>
+                <p className="text-gray-500 mt-2">
+                  <span className="font-semibold">Time Slot:</span> {b.timeSlot}
                 </p>
-                <p>{b.timeSlot} | Status: {b.status}</p>
-                <p>{b.workerName} | {b.workerPhone}</p>
+                <p className="text-gray-500 mt-1">
+                  <span className="font-semibold">Worker:</span> {b.workerName} | {b.workerPhone}
+                </p>
               </div>
-              {b.status !== "cancelled" && (
-                <button
-                  onClick={() => cancelBooking(b._id)}
-                  className="px-3 py-1 bg-red-500 text-white rounded"
+
+              <div className="flex justify-between items-center">
+                {/* Status Badge */}
+                <span
+                  className={`px-3 py-1 rounded-full text-sm font-semibold ${statusColors[b.status] || "bg-gray-100 text-gray-700"}`}
                 >
-                  Cancel
-                </button>
-              )}
-            </li>
+                  {b.status.replace("user-", "").replace("-", " ")}
+                </span>
+
+                {/* Cancel Button */}
+                {b.status !== "user-cancelled" && b.status !== "completed" && (
+                  <button
+                    onClick={() => cancelBooking(b._id)}
+                    className="flex items-center gap-1 px-3 py-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
+                  >
+                    <Trash2 className="w-4 h-4" /> Cancel
+                  </button>
+                )}
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
