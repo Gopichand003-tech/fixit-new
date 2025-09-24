@@ -29,7 +29,7 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: [
-      "https://fix-it-400z.onrender.com",
+      "https://fixit-x9f3.onrender.com",
       "http://localhost:5000",
       "http://localhost:5173"
     ],
