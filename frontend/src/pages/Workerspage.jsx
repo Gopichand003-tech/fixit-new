@@ -92,25 +92,31 @@ const WorkersPage = () => {
     Default: <Briefcase className="w-6 h-6 text-gray-600" />,
   };
 
-  // ✅ Normalize workers
+ 
   const normalizeWorker = (w, isStatic = false) => {
-    const imagePath = !isStatic ? w.documents?.photo || w.image : w.image;
-    const image = imagePath
+  let imagePath = !isStatic ? w.documents?.photo || w.image : w.image;
+
+  // If imagePath is a full URL (starts with http/https), don't prepend API_BASE
+  const image =
+    imagePath && (imagePath.startsWith("http://") || imagePath.startsWith("https://"))
+      ? imagePath
+      : imagePath
       ? `${!isStatic ? API_BASE : ""}${imagePath.startsWith("/") ? "" : "/"}${imagePath}`
       : "/placeholder-user.jpg";
 
-    return {
-      _id: w._id || w.id,   // <-- always provide _id
-       id: w._id || w.id,    // optional, keep both if UI needs id
-      name: w.name || "Unnamed Worker",
-      profession: w.profession || w.service || "Service",
-      location: w.location || "Unknown",
-      phone: w.phone || "N/A",
-      image,
-      available: w.available ?? true,
-      experience: w.experience || "New Worker",
-    };
+  return {
+    _id: w._id || w.id,
+    id: w._id || w.id,
+    name: w.name || "Unnamed Worker",
+    profession: w.profession || w.service || "Service",
+    location: w.location || "Unknown",
+    phone: w.phone || "N/A",
+    image,
+    available: w.available ?? true,
+    experience: w.experience || "New Worker",
   };
+};
+
 
   useEffect(() => {
     const fetchWorkers = async () => {

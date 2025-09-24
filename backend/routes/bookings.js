@@ -55,9 +55,6 @@ router.post("/", async (req, res) => {
     await booking.save();
     console.log("📦 Booking saved:", booking._id);
 
-    // ✅ Send WhatsApp (plain text) to worker
-    let whatsappStatus = "success";
-    let whatsappError = null;
 
     const msg = `🔔 New Booking Request
 Issue: ${booking.issue}
@@ -68,27 +65,36 @@ Time Slot: ${booking.timeSlot}
 
 Please contact the user to confirm.`;
 
-    if (booking.workerPhone && /^\+\d{10,15}$/.test(booking.workerPhone)) {
-      try {
-        await sendWhatsapp(booking.workerPhone, msg);
-        console.log(`✅ WhatsApp sent to worker ${booking.workerPhone}`);
-      } catch (err) {
-        console.error("❌ Worker WhatsApp failed:", err);
-        whatsappStatus = "failed";
-        whatsappError = err.message || err;
-      }
-    } else {
-      console.warn("❌ Skipping WhatsApp: invalid workerPhone", booking.workerPhone);
-      whatsappStatus = "failed";
-      whatsappError = "Invalid worker phone number";
-    }
+    // ✅ Sanitize worker phone to strict E.164 format
+let cleanPhone = workerPhone.replace(/\D/g, ""); // remove everything except digits
+if (!cleanPhone.startsWith("91")) cleanPhone = "91" + cleanPhone; // prepend country code if missing
+cleanPhone = "+" + cleanPhone;
 
-    res.status(201).json({
-      message: "Booking created",
-      booking,
-      whatsappStatus,
-      whatsappError,
-    });
+let whatsappStatus = "success";
+let whatsappError = null;
+
+if (/^\+\d{10,15}$/.test(cleanPhone)) {
+  try {
+    await sendWhatsapp(cleanPhone, msg);
+    console.log(`✅ WhatsApp sent to worker ${cleanPhone}`);
+  } catch (err) {
+    console.error("❌ Worker WhatsApp failed:", err);
+    whatsappStatus = "failed";
+    whatsappError = err.message || err;
+  }
+} else {
+  console.warn("❌ Skipping WhatsApp: invalid workerPhone", cleanPhone);
+  whatsappStatus = "failed";
+  whatsappError = "Invalid worker phone number";
+}
+
+res.status(201).json({
+  message: "Booking created",
+  booking,
+  whatsappStatus,
+  whatsappError,
+});
+
   } catch (error) {
     console.error("Booking error:", error);
     res.status(500).json({ error: "Failed to save booking" });
@@ -119,9 +125,11 @@ router.patch("/:id/cancel", protect, async (req, res) => {
     if (booking.userId.toString() !== req.user._id.toString())
       return res.status(403).json({ error: "Not authorized to cancel this booking" });
 
+    // Update booking status first
     booking.status = "user-cancelled";
     await booking.save();
 
+    // WhatsApp notification
     let whatsappStatus = "success";
     let whatsappError = null;
 
@@ -130,21 +138,27 @@ Issue: ${booking.issue}
 User: ${booking.userName} (${booking.userPhone})
 Time Slot: ${booking.timeSlot}`;
 
-    if (booking.workerPhone && /^\+\d{10,15}$/.test(booking.workerPhone)) {
-      try {
-        await sendWhatsapp(booking.workerPhone, msg);
-        console.log(`✅ WhatsApp sent to worker ${booking.workerPhone} about cancellation`);
-      } catch (err) {
-        console.error("❌ Worker WhatsApp failed:", err);
+    try {
+      // Sanitize worker phone to strict E.164 format
+      let cleanPhone = booking.workerPhone.replace(/\D/g, "");
+      if (!cleanPhone.startsWith("91")) cleanPhone = "91" + cleanPhone;
+      cleanPhone = "+" + cleanPhone;
+
+      if (/^\+\d{10,15}$/.test(cleanPhone)) {
+        await sendWhatsapp(cleanPhone, msg);
+        console.log(`✅ WhatsApp sent to worker ${cleanPhone} about cancellation`);
+      } else {
         whatsappStatus = "failed";
-        whatsappError = err.message || err;
+        whatsappError = "Invalid worker phone number";
+        console.warn("❌ Skipping WhatsApp: invalid workerPhone", cleanPhone);
       }
-    } else {
-      console.warn("❌ Skipping cancellation WhatsApp: invalid workerPhone", booking.workerPhone);
+    } catch (err) {
       whatsappStatus = "failed";
-      whatsappError = "Invalid worker phone number";
+      whatsappError = err.message || err;
+      console.warn("❌ WhatsApp sending failed, but booking cancelled:", err);
     }
 
+    // Always respond with booking cancelled info
     res.json({
       message: "Booking cancelled successfully",
       booking,
@@ -156,5 +170,6 @@ Time Slot: ${booking.timeSlot}`;
     res.status(500).json({ error: "Failed to cancel booking" });
   }
 });
+
 
 export default router;

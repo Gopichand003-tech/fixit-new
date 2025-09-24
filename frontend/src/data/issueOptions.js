@@ -1,5 +1,3 @@
-// src/data/issueOptions.js
-
 export const issuesData = {
   mechanic: [
     { label: "Engine Not Starting", price: 800 },
@@ -9,6 +7,8 @@ export const issuesData = {
     { label: "Battery Issue", price: 600 },
     { label: "Overheating", price: 750 },
     { label: "Suspension Problem", price: 1000 },
+    { label: "Clutch Issue", price: 850 },
+    { label: "Gearbox Problem", price: 1200 },
   ],
   plumbing: [
     { label: "Pipe Leakage", price: 400 },
@@ -33,12 +33,10 @@ export const issuesData = {
     { label: "Door Installation", price: 1200 },
     { label: "Cupboard Assembly", price: 1500 },
     { label: "Wood Polishing", price: 900 },
-    { label: "Window Frame Fix", price: 1000 },
   ],
   painter: [
     { label: "Room Painting", price: 2500 },
     { label: "Wall Crack Repair", price: 800 },
-    { label: "Waterproof Coating", price: 1500 },
     { label: "Ceiling Paint", price: 2000 },
     { label: "Exterior Painting", price: 5000 },
   ],
@@ -46,34 +44,82 @@ export const issuesData = {
     { label: "AC Gas Refill", price: 1200 },
     { label: "Cooling Issue", price: 1500 },
     { label: "AC Servicing", price: 1000 },
-    { label: "Fan Motor Repair", price: 1800 },
-    { label: "AC Installation", price: 2500 },
   ],
   catering: [
     { label: "Small Event (up to 50 guests)", price: 5000 },
     { label: "Medium Event (50-150 guests)", price: 12000 },
     { label: "Large Event (150+ guests)", price: 25000 },
     { label: "Wedding Catering", price: 50000 },
-    { label: "Birthday Catering", price: 8000 },
   ],
   musicTeacher: [
-    { label: "Guitar Lessons (per month)", price: 2000 },
-    { label: "Piano Lessons (per month)", price: 2500 },
-    { label: "Vocal Training (per month)", price: 3000 },
-    { label: "Violin Lessons (per month)", price: 2200 },
+    { label: "Guitar Lessons", price: 2000 },
+    { label: "Piano Lessons", price: 2500 },
+    { label: "Vocal Training", price: 3000 },
   ],
   landscaping: [
     { label: "Lawn Mowing", price: 1000 },
     { label: "Garden Design", price: 5000 },
     { label: "Tree Trimming", price: 1500 },
-    { label: "Planting Service", price: 2000 },
-    { label: "Landscape Maintenance", price: 3000 },
   ],
   photography: [
     { label: "Birthday Photoshoot", price: 5000 },
     { label: "Wedding Photoshoot", price: 25000 },
     { label: "Portfolio Shoot", price: 8000 },
-    { label: "Event Coverage", price: 15000 },
-    { label: "Candid Photography", price: 12000 },
+  ],
+
+  // NEW PROFESSIONS
+  TechSupport: [
+    { label: "Computer Setup", price: 1200 },
+    { label: "Software Installation", price: 800 },
+    { label: "Virus Removal", price: 1500 },
+    { label: "Network Setup", price: 2000 },
+    { label: "Printer Repair", price: 700 },
+  ],
+  cleaning: [
+    { label: "House Cleaning", price: 2000 },
+    { label: "Office Cleaning", price: 2500 },
+    { label: "Carpet Cleaning", price: 1500 },
+    { label: "Window Cleaning", price: 1000 },
+  ],
+  fitnessTrainer: [
+    { label: "Personal Training", price: 3000 },
+    { label: "Diet Consultation", price: 1500 },
+    { label: "Yoga Sessions", price: 2000 },
+  ],
+  tutoring: [
+    { label: "Math Tutoring", price: 2000 },
+    { label: "Science Tutoring", price: 2200 },
+    { label: "English Tutoring", price: 1800 },
+    { label: "Coding Lessons", price: 2500 },
+  ],
+  babysitting: [
+    { label: "Full Day Care", price: 1200 },
+    { label: "Half Day Care", price: 700 },
+    { label: "Night Care", price: 1500 },
+  ],
+  petCare: [
+    { label: "Dog Walking", price: 500 },
+    { label: "Pet Grooming", price: 1200 },
+    { label: "Pet Sitting", price: 1500 },
+  ],
+  healthcare: [
+    { label: "General Checkup", price: 800 },
+    { label: "Home Nurse Visit", price: 1500 },
+    { label: "Physiotherapy", price: 2000 },
+  ],
+  eventPlanning: [
+    { label: "Birthday Party", price: 8000 },
+    { label: "Wedding Planning", price: 50000 },
+    { label: "Corporate Event", price: 15000 },
+  ],
+  personalShopper: [
+    { label: "Clothing Assistance", price: 1000 },
+    { label: "Gift Shopping", price: 800 },
+    { label: "Home Decor Shopping", price: 1200 },
+  ],
+  industrialServices: [
+    { label: "Machine Maintenance", price: 5000 },
+    { label: "Equipment Installation", price: 8000 },
+    { label: "Factory Setup", price: 20000 },
   ],
 };

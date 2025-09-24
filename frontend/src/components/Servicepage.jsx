@@ -53,7 +53,7 @@ const WorkerList = () => {
   const scrollContainer = useRef(null);
 
   // ⭐ NEW: temporary hardcoded admin flag
-  const isAdmin = false; // later replace with role from login/auth
+  const isAdmin = true; // later replace with role from login/auth
 
   const professions = [
     { name: "All", icon: Briefcase },
@@ -163,21 +163,32 @@ const WorkerList = () => {
     };
   }, [API_BASE]);
 
-// Delete by admin
-  const handleDelete = async (id) => {
+const handleDelete = async (id) => {
   if (!window.confirm("Are you sure you want to delete this provider?")) return;
 
   try {
-    await axios.delete(`${API_BASE}/api/providers/${id}`, {
-      headers: { "x-admin-secret": "superSecret123" }, // 👈 must match .env
+    const res = await axios.delete(`${API_BASE}/api/providers/${id}`, {
+      headers: { "x-admin-secret": "superSecret123" }, // must match backend
     });
-    alert("Provider deleted");
+
+    console.log("Delete response:", res.data);
+    alert(res.data.message || "Provider deleted");
+
+    // Remove provider from local state
     setDbProviders((prev) => prev.filter((p) => p._id !== id));
   } catch (err) {
     console.error("Delete failed:", err.response?.data || err.message);
-    alert("Failed to delete provider");
+
+    if (err.response?.status === 404) {
+      alert("Provider not found. It might have already been deleted.");
+    } else if (err.response?.status === 403) {
+      alert("Not authorized to delete this provider");
+    } else {
+      alert("Failed to delete provider. Check console for details.");
+    }
   }
 };
+
 
 
 

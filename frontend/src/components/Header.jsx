@@ -1,10 +1,11 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
-import { Bell, Menu, User, LogOut, Briefcase } from "lucide-react";
+import { Bell, Menu, User, LogOut, Briefcase, User2, Ghost } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate, useLocation } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { Button } from "../components/ui/button";
 import axios from "axios";
+import { Mail } from "lucide-react";
 
 const Header = () => {
   const { user, logoutUser } = useContext(AuthContext);
@@ -158,41 +159,77 @@ const handleNotificationClick = async () => {
               <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-700 rounded-full" />
             </Button>
 
-            {/* Profile */}
-            <div className="relative" ref={dropdownRef}>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setDropdownOpen(prev => !prev); }}
-                className="flex items-center justify-center w-12 h-12 rounded-full hover:bg-gray-100 transition"
-              >
-                {user ? (
-                  user.profilePic ? (
-                    <img src={user.profilePic} alt={user.name} className="w-10 h-10 rounded-full border-2 border-purple-500" />
-                  ) : (
-                    <span className="w-10 h-10 flex items-center justify-center bg-purple-500 text-white font-semibold rounded-full">
-                      {user.name ? user.name.split(" ").map(n => n[0]).join("").toUpperCase() : "U"}
-                    </span>
-                  )
-                ) : <User className="w-6 h-6 text-purple-700" />}
-              </button>
+{/* Profile */}
+<div className="relative" ref={dropdownRef}>
+  <button
+    type="button"
+    onClick={(e) => { e.stopPropagation(); setDropdownOpen(prev => !prev); }}
+    className="flex items-center justify-center w-12 h-12 rounded-full hover:shadow-lg transition-shadow duration-200"
+  >
+{user ? (
+  user.profilePic ? (
+    <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-purple-400 via-pink-500 to-indigo-500 shadow-md">
+      <img
+        src={user.profilePic}
+        alt={user.name}
+        className="w-full h-full rounded-full object-cover bg-white"
+      />
+    </div>
+  ) : (
+    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-tr from-purple-500 via-pink-500 to-indigo-600 shadow-md">
+      <span className="text-white font-bold text-lg">
+        {user.name ? user.name.split(" ").map(n => n[0]).join("").toUpperCase() : "U"}
+      </span>
+    </div>
+  )
+) : (
+  <Ghost className="w-6 h-6 text-purple-700" />
+)}
 
-              {dropdownOpen && user && (
-                <div className="absolute right-0 mt-3 min-w-[18rem] bg-white/20 backdrop-blur-xl rounded-2xl shadow-xl p-5 space-y-4 z-50">
-                  <p className="text-white font-semibold">{user.name}</p>
-                  <p className="text-white/80 text-sm">{user.email}</p>
-                  <button onClick={() => navigate("/update-profile")} className="w-full px-5 py-3 bg-purple-500 text-white rounded-xl">Update Profile</button>
-                  <button onClick={handleLogout} className="w-full px-5 py-3 bg-red-500 text-white rounded-xl flex items-center justify-center gap-2">
-                    <LogOut className="w-5 h-5" /> Sign Out
-                  </button>
-                </div>
-              )}
-            </div>
+  </button>
 
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-              <Menu className="w-6 h-6 text-purple-700" />
-            </Button>
-          </div>
-        </div>
+  {dropdownOpen && user && (
+    <div className="absolute right-0 mt-3 min-w-[20rem] bg-white/20 backdrop-blur-xl border border-white/30 rounded-3xl shadow-2xl p-6 space-y-4 z-50 animate-fadeIn">
+      <div className="space-y-1">
+  <p className="flex items-center gap-2 text-purple-900 font-semibold text-lg hover:text-purple-700 transition-colors cursor-default">
+    <User className="w-4 h-4 text-purple-700" />
+    {user.name}
+  </p>
+  <p className="flex items-center gap-2 text-purple-900 font-semibold text-lg hover:text-purple-700 transition-colors cursor-default truncate">
+    <Mail className="w-4 h-4 text-purple-700" />
+    {user.email}
+  </p>
+</div>
+
+
+      <button
+        onClick={() => navigate("/update-profile")}
+        className="w-full py-3 px-5 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-2xl shadow-lg hover:scale-105 transition-transform duration-200"
+      >
+        Update Profile
+      </button>
+
+      <button
+        onClick={handleLogout}
+        className="w-full py-3 px-5 bg-gradient-to-r from-red-500 to-rose-500 text-white rounded-2xl flex items-center justify-center gap-2 shadow-lg hover:scale-105 transition-transform duration-200"
+      >
+        <LogOut className="w-5 h-5" /> Sign Out
+      </button>
+    </div>
+  )}
+</div>
+</div>
+
+{/* Mobile Menu Toggle */}
+<Button
+  variant="ghost"
+  size="icon"
+  className="md:hidden"
+  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+>
+  <Menu className="w-6 h-6 text-purple-700" />
+</Button>
+</div>
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
@@ -211,5 +248,6 @@ const handleNotificationClick = async () => {
     </header>
   );
 };
+
 
 export default Header;
