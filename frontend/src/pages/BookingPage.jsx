@@ -98,10 +98,15 @@ const BookingPage = () => {
       return;
     }
 
+    // ✅ Sanitize worker phone number for E.164 format
+    let formattedWorkerPhone = worker.phone?.replace(/\D/g, "");
+    if (!formattedWorkerPhone.startsWith("91")) formattedWorkerPhone = "91" + formattedWorkerPhone;
+    formattedWorkerPhone = "+" + formattedWorkerPhone;
+
     const bookingData = {
       workerId: worker._id,
       workerName: worker.name,
-      workerPhone: worker.phone?.replace(/[^+\d]/g, ""),
+      workerPhone: formattedWorkerPhone,
       issue: selectedIssue.label,
       price: Number(selectedIssue.price),
       userId,
@@ -113,44 +118,51 @@ const BookingPage = () => {
 
     console.log("🚀 Sending booking request to:", import.meta.env.VITE_API_URL);
     console.log("📦 Booking payload:", bookingData);
-    
-try {
-  const res = await axios.post(
-    `${import.meta.env.VITE_API_URL}/api/bookings`,
-    bookingData,
-    { headers: getAuthHeaders() }
-  );
 
-  console.log("✅ Booking API Response:", res.data);
-  toast.success("✅ Booking submitted! Worker will be notified via WhatsApp.");
+    try {
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/bookings`,
+        bookingData,
+        { headers: getAuthHeaders() }
+      );
 
-  // Optional: in-app notification
-  try {
-    await axios.post(
-      `${import.meta.env.VITE_API_URL}/api/notifications`,
-      {
-        workerId: worker._id,
-        message: `New booking from ${userName} for ${selectedIssue.label} at ${timeSlot}`,
-      },
-      { headers: getAuthHeaders() }
-    );
-  } catch (err) {
-    console.warn("⚠️ Notification failed", err);
-  }
+      console.log("✅ Booking API Response:", res.data);
+      
+      // Update WhatsApp status for UI feedback
+      if (res.data.whatsappStatus) setWhatsappStatus(res.data.whatsappStatus);
+      if (res.data.whatsappStatus === "failed") {
+        toast.error(`WhatsApp failed: ${res.data.whatsappError}`);
+      } else {
+        toast.success("✅ Booking submitted! Worker will be notified via WhatsApp.");
+      }
 
-  navigate("/bookingsubmitted");
-} catch (err) {
-  console.error("❌ Booking error:", err.response?.data || err);
-  if (err.response?.status === 401 || err.response?.status === 403) {
-    toast.error("❌ Token invalid or expired. Please login again.");
-    Cookies.remove("token");
-  } else if (err.response?.status === 400) {
-    toast.error("❌ Booking failed. Invalid request data.");
-  } else {
-    toast.error("❌ Booking failed. Please try again later.");
-  }
-}
-  }
+      // Optional: in-app notification
+      try {
+        await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/notifications`,
+          {
+            workerId: worker._id,
+            message: `New booking from ${userName} for ${selectedIssue.label} at ${timeSlot}`,
+          },
+          { headers: getAuthHeaders() }
+        );
+      } catch (err) {
+        console.warn("⚠️ Notification failed", err);
+      }
+
+      navigate("/bookingsubmitted");
+    } catch (err) {
+      console.error("❌ Booking error:", err.response?.data || err);
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        toast.error("❌ Token invalid or expired. Please login again.");
+        Cookies.remove("token");
+      } else if (err.response?.status === 400) {
+        toast.error("❌ Booking failed. Invalid request data.");
+      } else {
+        toast.error("❌ Booking failed. Please try again later.");
+      }
+    }
+  };
 
   const isFormValid =
     userName.trim() &&

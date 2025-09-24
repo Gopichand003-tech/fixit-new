@@ -6,6 +6,8 @@ const bookingSchema = new mongoose.Schema({
     required: true,
   },
   workerName: { type: String, required: true },
+  workerPhone: { type: String, required: true },
+
 
   issue: { type: String, required: true },
   price: { type: Number, required: true },

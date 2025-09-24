@@ -52,7 +52,8 @@ const LOCATIONS =[
   "Proddatur",
   "Tenali",
   "Adoni",
-  "Nandyal"
+  "Nandyal",
+  "Mangalagiri"
 ];
 
 
@@ -75,7 +76,18 @@ const API = import.meta.env.VITE_API_URL || VITE_API_URI;
   paymentSuccess: false,
 });
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+const handleChange = (e) => {
+  let { name, value } = e.target;
+
+  // Auto-add +91 for phone numbers
+  if (name === "phone") {
+    value = value.replace(/\D/g, ""); // remove non-digits
+    if (value.length > 0 && !value.startsWith("91")) value = "91" + value;
+    value = "+" + value;
+  }
+
+  setFormData({ ...formData, [name]: value });
+};
   const handleFileChange = (e) => setFormData({ ...formData, documents: { ...formData.documents, [e.target.name]: e.target.files[0] } });
 
   // OTP Functions

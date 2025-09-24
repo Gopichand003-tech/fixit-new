@@ -33,27 +33,34 @@ const MyBookings = () => {
   };
 
   // Cancel booking
-  const cancelBooking = async (id) => {
-    if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+const cancelBooking = async (id) => {
+  if (!window.confirm("Are you sure you want to cancel this booking?")) return;
 
-    // Optimistic UI update
-    setBookings(prev => prev.filter(b => b._id !== id));
+  // Optimistic UI update
+  setBookings((prev) => prev.filter((b) => b._id !== id));
 
-    try {
-      const token = Cookies.get("token");
-      await axios.patch(
-        `${import.meta.env.VITE_API_URL}/api/bookings/${id}/cancel`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success("❌ Booking cancelled. Worker has been notified via WhatsApp.");
-    } catch (err) {
-      console.error("Cancel booking error:", err.response?.data || err.message);
-      toast.error("❌ Failed to cancel booking. Please try again.");
-      // Re-fetch to sync state
-      fetchBookings();
-    }
-  };
+  try {
+    const token = Cookies.get("token");
+    const res = await axios.patch(
+      `${import.meta.env.VITE_API_URL}/api/bookings/${id}/cancel`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    const { whatsappStatus, whatsappError } = res.data;
+
+    toast.success(
+      `❌ Booking cancelled.${
+        whatsappStatus === "failed" ? ` WhatsApp failed: ${whatsappError}` : " Worker notified via WhatsApp ✅"
+      }`
+    );
+  } catch (err) {
+    console.error("Cancel booking error:", err.response?.data || err.message);
+    toast.error("❌ Failed to cancel booking. Please try again.");
+    fetchBookings(); // Sync UI
+  }
+};
+
 
   useEffect(() => {
     fetchBookings();
