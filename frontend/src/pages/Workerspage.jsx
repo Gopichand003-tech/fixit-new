@@ -92,16 +92,15 @@ const WorkersPage = () => {
     Default: <Briefcase className="w-6 h-6 text-gray-600" />,
   };
 
- 
-  const normalizeWorker = (w, isStatic = false) => {
-  let imagePath = !isStatic ? w.documents?.photo || w.image : w.image;
+ const normalizeWorker = (w) => {
+  let imagePath = w.documents?.photo || w.image;
 
   // If imagePath is a full URL (starts with http/https), don't prepend API_BASE
   const image =
     imagePath && (imagePath.startsWith("http://") || imagePath.startsWith("https://"))
       ? imagePath
       : imagePath
-      ? `${!isStatic ? API_BASE : ""}${imagePath.startsWith("/") ? "" : "/"}${imagePath}`
+      ? `${API_BASE}${imagePath.startsWith("/") ? "" : "/"}${imagePath}`
       : "/placeholder-user.jpg";
 
   return {
@@ -117,35 +116,34 @@ const WorkersPage = () => {
   };
 };
 
+useEffect(() => {
+  const fetchWorkers = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/api/providers`);
+      const backendWorkers = res.data.map((w) => normalizeWorker(w));
 
-  useEffect(() => {
-    const fetchWorkers = async () => {
-      try {
-        const res = await axios.get(`${API_BASE}/api/providers`);
-        const backendWorkers = res.data.map((w) => normalizeWorker(w));
-        const staticWorkers = serviceWorkers.map((w) => normalizeWorker(w, true));
-        let allWorkers = [...staticWorkers, ...backendWorkers];
-
-        // ✅ Filter by profession + location
-        let filtered = allWorkers;
-        if (selectedProfession !== "All") {
-          filtered = filtered.filter(
-            (w) =>
-              w.profession?.toLowerCase().trim() === selectedProfession.toLowerCase().trim()
-          );
-        }
-        if (selectedLocation) {
-          filtered = filtered.filter((w) =>
-            w.location?.toLowerCase().includes(selectedLocation.toLowerCase())
-          );
-        }
-        setFilteredWorkers(filtered);
-      } catch (err) {
-        console.error("❌ Error fetching workers:", err);
+      // Filter by profession + location
+      let filtered = backendWorkers;
+      if (selectedProfession !== "All") {
+        filtered = filtered.filter(
+          (w) =>
+            w.profession?.toLowerCase().trim() === selectedProfession.toLowerCase().trim()
+        );
       }
-    };
-    fetchWorkers();
-  }, [selectedProfession, selectedLocation]);
+      if (selectedLocation) {
+        filtered = filtered.filter((w) =>
+          w.location?.toLowerCase().includes(selectedLocation.toLowerCase())
+        );
+      }
+
+      setFilteredWorkers(filtered);
+    } catch (err) {
+      console.error("❌ Error fetching workers:", err);
+    }
+  };
+
+  fetchWorkers();
+}, [selectedProfession, selectedLocation]);
 
   return (
     <div className="w-screen min-h-screen py-16 overflow-x-hidden relative bg-cover bg-center"
