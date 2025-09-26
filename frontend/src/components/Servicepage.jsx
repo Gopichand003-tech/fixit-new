@@ -1,7 +1,7 @@
 // Servicepage.jsx
 import { useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
-import { serviceWorkers } from "../data/Serviceworkers";
+// import { serviceWorkers } from "../data/Serviceworkers";
 import axios from "axios";
 import {
   MapPin,

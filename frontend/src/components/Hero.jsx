@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MapPin, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { serviceWorkers } from "../data/Serviceworkers"; // ✅ use worker data
+// import { serviceWorkers } from "../data/Serviceworkers"; // ✅ use worker data
 
 const Hero = () => {
   const [searchQuery, setSearchQuery] = useState("");

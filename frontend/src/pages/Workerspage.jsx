@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
-import { serviceWorkers } from "../data/Serviceworkers"; // ✅ static workers
+// import { serviceWorkers } from "../data/Serviceworkers"; // ✅ static workers
 import {
   MapPin,
   PhoneCall as PhoneCallIcon,
