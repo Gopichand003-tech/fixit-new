@@ -193,8 +193,7 @@ const handleDelete = async (id) => {
 
 
   // Merge static + dynamic providers
-  const allWorkers = [...serviceWorkers, ...dbProviders];
-
+const allWorkers = dbProviders;
   const filteredWorkers =
     selectedProfession === "All"
       ? allWorkers
