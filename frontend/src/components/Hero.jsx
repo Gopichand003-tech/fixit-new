@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { MapPin, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-// import { serviceWorkers } from "../data/Serviceworkers"; // ✅ use worker data
 
 const Hero = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -10,61 +9,56 @@ const Hero = () => {
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const navigate = useNavigate();
 
-  // Extract unique professions & locations and enrich with more
   const professions = [
-    ...new Set(serviceWorkers.map((w) => w.profession)),
-    
-  "Electronics",
-  "Plumbing",
-  "Painting",
-  "Electrician",
-  "Mechanic",
-  "Cleaning",
-  "Landscaping",
-  "TechSupport",
-  "Photography",
-  "Carpenter",
-  "Junk Removal",
-  "Bodycare",
-  "Catering",
-  "Fitness Trainer",
-  "MusicTeacher",
-  "Tutoring",
-  "Personal Shopper",
-  "Business Consulting",
-  "Healthcare",
-  "Babysitting",
-  "Pet Care",
-  "AC Repair",
-  "Event Planning",
-  "Transport Service",
-  "Industrial Services"
-];
-
+    "Electronics",
+    "Plumbing",
+    "Painting",
+    "Electrician",
+    "Mechanic",
+    "Cleaning",
+    "Landscaping",
+    "TechSupport",
+    "Photography",
+    "Carpenter",
+    "Junk Removal",
+    "Bodycare",
+    "Catering",
+    "Fitness Trainer",
+    "MusicTeacher",
+    "Tutoring",
+    "Personal Shopper",
+    "Business Consulting",
+    "Healthcare",
+    "Babysitting",
+    "Pet Care",
+    "AC Repair",
+    "Event Planning",
+    "Transport Service",
+    "Industrial Services"
+  ];
 
   const locations = [
-    ...new Set(serviceWorkers.map((w) => w.location)),
     "Visakhapatnam",
-  "Vijayawada",
-  "Guntur",
-  "Nellore",
-  "Tirupati",
-  "Kurnool",
-  "Rajahmundry",
-  "Kakinada",
-  "Anantapur",
-  "Kadapa",
-  "Ongole",
-  "Eluru",
-  "Vizianagaram",
-  "Machilipatnam",
-  "Chittoor",
-  "Hindupur",
-  "Proddatur",
-  "Tenali",
-  "Adoni",
-  "Nandyal",
-  "Mangalagiri"
+    "Vijayawada",
+    "Guntur",
+    "Nellore",
+    "Tirupati",
+    "Kurnool",
+    "Rajahmundry",
+    "Kakinada",
+    "Anantapur",
+    "Kadapa",
+    "Ongole",
+    "Eluru",
+    "Vizianagaram",
+    "Machilipatnam",
+    "Chittoor",
+    "Hindupur",
+    "Proddatur",
+    "Tenali",
+    "Adoni",
+    "Nandyal",
+    "Mangalagiri"
   ];
 
   const handleSearch = () => {
