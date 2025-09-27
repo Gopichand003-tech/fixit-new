@@ -260,133 +260,140 @@ return (
     </div>
 
     {/* Worker Cards Horizontal Scroll */}
-    <div className="relative">
-      {/* Left Button */}
-      <button
-        onClick={() =>
-          scrollContainer.current.scrollBy({ left: -300, behavior: "smooth" })
-        }
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-full shadow-lg hover:scale-110 transition-transform duration-300"
-      >
-        <ChevronLeft className="w-6 h-6" />
-      </button>
+   {/* Cards Container */}
+<div className="relative">
+  {/* Left Scroll Button */}
+  <button
+    onClick={() =>
+      scrollContainer.current.scrollBy({ left: -300, behavior: "smooth" })
+    }
+    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-full shadow-lg hover:scale-110 transition-transform duration-300"
+  >
+    <ChevronLeft className="w-6 h-6" />
+  </button>
 
-      {/* Cards Container */}
-      <div
-        ref={scrollContainer}
-        className="flex gap-9 overflow-x-auto scrollbar-hide scroll-smooth px-12"
-      >
-        {filteredWorkers.map((worker) => (
-          <div
-            key={worker._id || worker.id}
-            className="flex-shrink-0 w-64 relative rounded-3xl border border-gray-200 p-6 flex flex-col justify-between shadow-lg hover:shadow-2xl hover:-translate-y-3 hover:border-indigo-400 hover:ring-4 hover:ring-indigo-100 transition-all duration-300 overflow-hidden bg-white"
+  <div
+    ref={scrollContainer}
+    className="flex gap-9 overflow-x-auto scrollbar-hide scroll-smooth px-12"
+  >
+    {filteredWorkers.length === 0 ? (
+      <div className="flex justify-center items-center w-full py-10">
+        <p className="text-xl font-semibold text-gray-600 bg-white shadow-md rounded-2xl px-6 py-4 border border-gray-200">
+          😔 Sorry, no workers are available right now for{" "}
+          <span className="font-bold text-indigo-600">{selectedProfession}</span>.
+        </p>
+      </div>
+    ) : (
+      filteredWorkers.map((worker) => (
+        <div
+          key={worker._id || worker.id}
+          className="flex-shrink-0 w-64 relative rounded-3xl border border-gray-200 p-6 flex flex-col justify-between shadow-lg hover:shadow-2xl hover:-translate-y-3 hover:border-indigo-400 hover:ring-4 hover:ring-indigo-100 transition-all duration-300 overflow-hidden bg-white"
           style={{
-                background: `
-                  linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(133, 109, 150, 0.95) 40%, rgba(224,231,255,1) 100%),
-                  radial-gradient(circle at top left, rgba(6, 36, 33, 0.15), transparent 60%),
-                  radial-gradient(circle at bottom right, rgba(16,185,129,0.15), transparent 60%)
-                `,
-                backdropFilter: "blur(12px)",
-              }}
-          >
-            {/* Top-left profession icon */}
-            <div className="absolute top-4 left-4 bg-white p-2 rounded-full shadow-md">
-              {professionIcons[worker.profession] || professionIcons.Default}
-            </div>
+            background: `
+              linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(133, 109, 150, 0.95) 40%, rgba(224,231,255,1) 100%),
+              radial-gradient(circle at top left, rgba(6, 36, 33, 0.15), transparent 60%),
+              radial-gradient(circle at bottom right, rgba(16,185,129,0.15), transparent 60%)
+            `,
+            backdropFilter: "blur(12px)",
+          }}
+        >
+          {/* Profession Icon */}
+          <div className="absolute top-4 left-4 bg-white p-2 rounded-full shadow-md">
+            {professionIcons[worker.profession] || professionIcons.Default}
+          </div>
 
-            {/* Top-right admin delete button */}
-            <div className="absolute top-4 right-4 flex gap-2">
-              {isAdmin && (
-                <button
-                  onClick={() => handleDelete(worker._id)}
-                  className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-md transition"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
+          {/* Admin Delete Button */}
+          {isAdmin && (
+            <button
+              onClick={() => handleDelete(worker._id)}
+              className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-md transition"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* Card Body */}
+          <div className="flex flex-col items-center text-center mb-4">
+            <div className="relative p-1 rounded-full bg-gradient-to-r from-green-500 to-pink-500 shadow-lg">
+              <img
+                src={worker.image}
+                alt={worker.name}
+                className="w-32 h-32 rounded-full object-cover border-4 border-white"
+              />
+              {worker.available && (
+                <span className="absolute -bottom-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full shadow">
+                  Active
+                </span>
               )}
             </div>
 
-            {/* Card Content */}
-            <div className="flex flex-col items-center text-center mb-4">
-              <div className="relative p-1 rounded-full bg-gradient-to-r from-green-500 to-pink-500 shadow-lg">
-                <img
-                  src={worker.image}
-                  alt={worker.name}
-                  className="w-32 h-32 rounded-full object-cover border-4 border-white"
-                />
-                {worker.available && (
-                  <span className="absolute -bottom-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full shadow">
-                    Active
-                  </span>
-                )}
-              </div>
-              <h2 className="mt-4 text-2xl font-bold text-pink-800">
-                {worker.name}
-              </h2>
-              <p className="flex items-center gap-2 text-lg text-indigo-900 font-semibold">
-                <Briefcase className="w-5 h-5" /> {worker.profession}
-              </p>
-              <p className="flex items-center gap-2 text-sm text-indigo-800">
-                <Timer className="w-5 h-5 text-blue-500" /> {worker.experience}
-                </p>
-              <p className="flex items-center gap-2 text-sm text-indigo-800">
-                <MapPin className="w-5 h-5 text-orange-800" /> {worker.location}
-              </p>
-              <p className="flex items-center gap-2 text-sm font-semibold bg-gradient-to-r from-pink-700 to-purple-700 bg-clip-text text-transparent">
-                <PhoneCallIcon className="w-5 h-5" /> {worker.phone}
-              </p>
-              <p
-                className={`text-sm mt-1 font-semibold ${
-                  worker.available ? "text-green-600" : "text-red-500"
-                }`}
-              >
-                {worker.available ? "Available" : "Not Available"}
-              </p>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="mt-5 flex justify-center gap-4">
-              <button
-                disabled={!worker.available}
-                onClick={() =>
-                  worker.available &&
-                  navigate(`/booking/${worker._id || worker.id}`, {
-                    state: { worker },
-                  })
-                }
-                className={`px-5 py-2 rounded-full text-sm font-semibold shadow-md transform transition-all duration-300 ${
-                  worker.available
-                    ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:scale-105 hover:shadow-lg"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
-              >
-                Book
-              </button>
-              <a
-                href={`tel:${worker.phone}`}
-                className={`px-5 py-2 rounded-full text-sm font-semibold shadow-md transform transition-all duration-300 ${
-                  worker.available
-                    ? "bg-gradient-to-r from-purple-500 to-indigo-300 text-white hover:scale-105 hover:shadow-xl"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
-              >
-                Call Now
-              </a>
-            </div>
+            <h2 className="mt-4 text-2xl font-bold text-pink-800">{worker.name}</h2>
+            <p className="flex items-center gap-2 text-lg text-indigo-900 font-semibold">
+              <Briefcase className="w-5 h-5" /> {worker.profession}
+            </p>
+            <p className="flex items-center gap-2 text-sm text-indigo-800">
+              <Timer className="w-5 h-5 text-blue-500" /> {worker.experience}
+            </p>
+            <p className="flex items-center gap-2 text-sm text-indigo-800">
+              <MapPin className="w-5 h-5 text-orange-800" /> {worker.location}
+            </p>
+            <p className="flex items-center gap-2 text-sm font-semibold bg-gradient-to-r from-pink-700 to-purple-700 bg-clip-text text-transparent">
+              <PhoneCallIcon className="w-5 h-5" /> {worker.phone}
+            </p>
+            <p
+              className={`text-sm mt-1 font-semibold ${
+                worker.available ? "text-green-600" : "text-red-500"
+              }`}
+            >
+              {worker.available ? "Available" : "Not Available"}
+            </p>
           </div>
-        ))}
-      </div>
 
-      {/* Right Button */}
-      <button
-        onClick={() =>
-          scrollContainer.current.scrollBy({ left: 300, behavior: "smooth" })
-        }
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-full shadow-lg hover:scale-110 transition-transform duration-300"
-      >
-        <ChevronRight className="w-6 h-6" />
-      </button>
-    </div>
+          {/* Action Buttons */}
+          <div className="mt-5 flex justify-center gap-4">
+            <button
+              disabled={!worker.available}
+              onClick={() =>
+                worker.available &&
+                navigate(`/booking/${worker._id || worker.id}`, {
+                  state: { worker },
+                })
+              }
+              className={`px-5 py-2 rounded-full text-sm font-semibold shadow-md transform transition-all duration-300 ${
+                worker.available
+                  ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:scale-105 hover:shadow-lg"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+            >
+              Book
+            </button>
+            <a
+              href={`tel:${worker.phone}`}
+              className={`px-5 py-2 rounded-full text-sm font-semibold shadow-md transform transition-all duration-300 ${
+                worker.available
+                  ? "bg-gradient-to-r from-purple-500 to-indigo-300 text-white hover:scale-105 hover:shadow-xl"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+            >
+              Call Now
+            </a>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+
+  {/* Right Scroll Button */}
+  <button
+    onClick={() =>
+      scrollContainer.current.scrollBy({ left: 300, behavior: "smooth" })
+    }
+    className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-full shadow-lg hover:scale-110 transition-transform duration-300"
+  >
+    <ChevronRight className="w-6 h-6" />
+  </button>
+</div>
+
 
     {/* Animation Styles */}
     <style>{`
