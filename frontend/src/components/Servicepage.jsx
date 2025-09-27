@@ -44,7 +44,8 @@ import {
   Truck,
   UtensilsCrossed,
   Timer,
-  BriefcaseBusiness
+  BriefcaseBusiness,
+  Tv2
 } from "lucide-react";
 
 const WorkerList = () => {
@@ -111,6 +112,8 @@ const WorkerList = () => {
     Photography: <CameraIcon className="w-6 h-6 text-indigo-600" />,
     Catering: <UtensilsCrossed className="w-6 h-6 text-orange-600" />,
     MusicTeacher: <Music className="w-6 h-6 text-pink-600" />,
+    Electronics: <Tv2 className="w-6 h-6 text-rose-600" />,
+
     Default: <Briefcase className="w-6 h-6 text-gray-600" />,
   };
 
