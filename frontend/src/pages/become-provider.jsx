@@ -28,7 +28,7 @@ const SERVICES = [
   "Pet Care",
   "AC Repair",
   "Event Planning",
-  "Transport Service",
+  "Delivery",
   "Industrial Services"
 ];
 

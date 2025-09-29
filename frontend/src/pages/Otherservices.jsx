@@ -29,6 +29,7 @@ import {
   Gift,
   PaintRoller,
   EyeClosed,
+  Truck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -56,7 +57,7 @@ const services = [
   { icon: PawPrint, name: "Pet Care", count: "45+ providers", category: "Outdoor", color: "from-amber-500 to-amber-600" },
   { icon: AirVent, name: "AC Repair", count: "50+ providers", category: "Home", color: "from-blue-400 to-blue-500" },
   { icon: Gift, name: "Event Planning", count: "29+ providers", category: "Creative", color: "from-indigo-400 to-indigo-500" },
-  { icon: Bus, name: "Transport Service", count: "42+ providers", category: "Outdoor", color: "from-green-400 to-green-500" },
+  { icon: Truck, name: "Delivery", count: "42+ providers", category: "Outdoor", color: "from-green-400 to-green-500" },
   { icon: Factory, name: "Industrial Services", count: "21+ providers", category: "Outdoor", color: "from-slate-400 to-slate-500" },
 ];
 
