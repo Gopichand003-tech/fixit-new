@@ -33,7 +33,7 @@ const Hero = () => {
     "Pet Care",
     "AC Repair",
     "Event Planning",
-    "Transport Service",
+    "Delivery",
     "Industrial Services"
   ];
 
