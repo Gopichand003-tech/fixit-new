@@ -101,7 +101,7 @@ const WorkerList = () => {
     PetCare: <PawPrint className="w-6 h-6 text-brown-600" />,
     ACMechanic: <AirVent className="w-6 h-6 text-cyan-600" />,
     Caterer: <CupSoda className="w-6 h-6 text-orange-400" />,
-    BusDriver: <Bus className="w-6 h-6 text-indigo-700" />,
+    Delivery: <Truck className="w-6 h-6 text-indigo-700" />,
     FactoryWorker: <Factory className="w-6 h-6 text-gray-800" />,
     EventPlanner: <PartyPopper className="w-6 h-6 text-purple-500" />,
     GiftShop: <Gift className="w-6 h-6 text-rose-600" />,
