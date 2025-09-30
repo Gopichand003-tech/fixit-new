@@ -124,11 +124,21 @@ const handleNotificationClick = async () => {
             className="flex items-center gap-4 cursor-pointer select-none flex-shrink-0"
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           >
-            <div className="w-14 h-14 bg-gradient-to-tr from-purple-500 to-pink-400 rounded-xl flex items-center justify-center shadow-md">
-              <span className="text-white font-extrabold text-2xl">F</span>
-            </div>
+              
+{/* Site Logo & Name */}
+
+  {/* Circular Logo */}
+  <div className="w-20 h-20 rounded-full flex items-center justify-center  p-1">
+    <img
+      src="/FIXIT2.png"
+      alt="FIXIT Logo"
+ className="w-20 h-18 p-1 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-600 shadow-md flex items-center justify-center">
+    </img>
+  </div>
+
+
             <span className="text-4xl font-bold bg-gradient-to-tr from-purple-600 to-pink-500 bg-clip-text text-transparent">
-              FIX-IT
+              FIXIT
             </span>
           </div>
 
@@ -245,6 +255,7 @@ const handleNotificationClick = async () => {
           </div>
         )}
       </div>
+      
     </header>
   );
 };
