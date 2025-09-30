@@ -1,25 +1,26 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider } from "./context/AuthContext";
-import LoginRegister from "./pages/LoginRegister";
-import Dashboard from "./pages/Dashboard";
+import { lazy, Suspense } from "react";
 import Headersection from "./components/Header";
 import Hero from "./components/Hero";
-// import Mapsection from "./components/Mapsection";
 import Servicecategories from "./components/ServiceCategories";
 import Footer from "./components/Footer";
-import ServicesPage from "./components/Servicepage";
-import OtherServices from "./pages/Otherservices";
-import WorkersPage from "./pages/Workerspage";
-import MainPage from "./pages/Mainpage";
-import BecomeProvider from "./pages/become-provider";
-import UpdateProfile from "./pages/UpdateProfiled";
-import TestimonialsCRUD from "./pages/Testimonials";
-import ProfilePicUpload from "./pages/Profilepage";
-import BookingPage from "./pages/BookingPage"; // ✅ Updated to use BookingPage
-// import ConfirmationPage from "./pages/confirmation";
-import MyBookings from "./pages/Mybookings";
-import BookingSubmitted from "./pages/bookingsubmitted";
+
+// Lazy-loaded pages
+const LoginRegister = lazy(() => import("./pages/LoginRegister"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const OtherServices = lazy(() => import("./pages/Otherservices"));
+const WorkersPage = lazy(() => import("./pages/Workerspage"));
+const MainPage = lazy(() => import("./pages/Mainpage"));
+const BecomeProvider = lazy(() => import("./pages/become-provider"));
+const UpdateProfile = lazy(() => import("./pages/UpdateProfiled"));
+const TestimonialsCRUD = lazy(() => import("./pages/Testimonials"));
+const ProfilePicUpload = lazy(() => import("./pages/Profilepage"));
+const BookingPage = lazy(() => import("./pages/BookingPage"));
+const MyBookings = lazy(() => import("./pages/Mybookings"));
+const BookingSubmitted = lazy(() => import("./pages/bookingsubmitted"));
+const ServicesPage = lazy(() => import("./components/Servicepage"));
 
 // Protected Route
 function ProtectedRoute({ children }) {
@@ -44,138 +45,140 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          {/* Public login/register */}
-          <Route path="/" element={<LoginRegister />} />
+        {/* Wrap all lazy-loaded routes in Suspense */}
+        <Suspense fallback={<div className="text-center py-20">Loading...</div>}>
+          <Routes>
+            {/* Public login/register */}
+            <Route path="/" element={<LoginRegister />} />
 
-          {/* Dashboard */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedLayout>
-                <Dashboard />
-              </ProtectedLayout>
-            }
-          />
+            {/* Dashboard */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedLayout>
+                  <Dashboard />
+                </ProtectedLayout>
+              }
+            />
 
-          {/* Booking (dynamic worker ID) */}
-          <Route
-            path="/booking/:id"
-            element={
-              <ProtectedLayout>
-                <BookingPage />
-              </ProtectedLayout>
-            }
-          />
+            {/* Booking (dynamic worker ID) */}
+            <Route
+              path="/booking/:id"
+              element={
+                <ProtectedLayout>
+                  <BookingPage />
+                </ProtectedLayout>
+              }
+            />
 
-          {/* Other Services */}
-          <Route
-            path="/other-services"
-            element={
-              <ProtectedLayout>
-                <OtherServices />
-              </ProtectedLayout>
-            }
-          />
-          <Route
-            path="/bookingsubmitted"
-            element={
-              <ProtectedLayout>
-                <BookingSubmitted />
-              </ProtectedLayout>
-            }
-          />
+            {/* Other Services */}
+            <Route
+              path="/other-services"
+              element={
+                <ProtectedLayout>
+                  <OtherServices />
+                </ProtectedLayout>
+              }
+            />
+            <Route
+              path="/bookingsubmitted"
+              element={
+                <ProtectedLayout>
+                  <BookingSubmitted />
+                </ProtectedLayout>
+              }
+            />
 
-          <Route
-            path="/Mybookings"
-            element={
-              <ProtectedLayout>
-                <MyBookings />
-              </ProtectedLayout>
-            }
-          />
+            <Route
+              path="/Mybookings"
+              element={
+                <ProtectedLayout>
+                  <MyBookings />
+                </ProtectedLayout>
+              }
+            />
 
-          {/* Workers */}
-          <Route
-            path="/workers"
-            element={
-              <ProtectedLayout>
-                <WorkersPage />
-              </ProtectedLayout>
-            }
-          />
+            {/* Workers */}
+            <Route
+              path="/workers"
+              element={
+                <ProtectedLayout>
+                  <WorkersPage />
+                </ProtectedLayout>
+              }
+            />
 
-          {/* Main Page */}
-          <Route
-            path="/mainpage"
-            element={
-              <ProtectedLayout>
-                <MainPage />
-              </ProtectedLayout>
-            }
-          />
+            {/* Main Page */}
+            <Route
+              path="/mainpage"
+              element={
+                <ProtectedLayout>
+                  <MainPage />
+                </ProtectedLayout>
+              }
+            />
 
-          {/* Testimonials */}
-          <Route
-            path="/testimonials"
-            element={
-              <ProtectedLayout>
-                <TestimonialsCRUD />
-              </ProtectedLayout>
-            }
-          />
+            {/* Testimonials */}
+            <Route
+              path="/testimonials"
+              element={
+                <ProtectedLayout>
+                  <TestimonialsCRUD />
+                </ProtectedLayout>
+              }
+            />
 
-          {/* Become Provider */}
-          <Route
-            path="/become-provider"
-            element={
-              <ProtectedLayout>
-                <BecomeProvider />
-              </ProtectedLayout>
-            }
-          />
+            {/* Become Provider */}
+            <Route
+              path="/become-provider"
+              element={
+                <ProtectedLayout>
+                  <BecomeProvider />
+                </ProtectedLayout>
+              }
+            />
 
-          {/* Profile Page */}
-          <Route
-            path="/profilepage"
-            element={
-              <ProtectedLayout>
-                <ProfilePicUpload />
-              </ProtectedLayout>
-            }
-          />
+            {/* Profile Page */}
+            <Route
+              path="/profilepage"
+              element={
+                <ProtectedLayout>
+                  <ProfilePicUpload />
+                </ProtectedLayout>
+              }
+            />
 
-          {/* Home with scroll sections */}
-          <Route
-            path="/home"
-            element={
-              <ProtectedLayout>
-                <Hero />
-                <section id="servicecategories">
-                  <Servicecategories />
-                </section>
-                <section id="servicepage">
-                  <ServicesPage />
-                </section>
-                {/* <Mapsection /> */}
-                <Footer />
-              </ProtectedLayout>
-            }
-          />
+            {/* Home with scroll sections */}
+            <Route
+              path="/home"
+              element={
+                <ProtectedLayout>
+                  <Hero />
+                  <section id="servicecategories">
+                    <Servicecategories />
+                  </section>
+                  <section id="servicepage">
+                    <ServicesPage />
+                  </section>
+                  <Footer />
+                </ProtectedLayout>
+              }
+            />
 
-          Update Profile
-          <Route
-            path="/update-profile"
-            element={
-              <ProtectedLayout>
-                <UpdateProfile />
-              </ProtectedLayout>
-            }
-          />
+            {/* Update Profile */}
+            <Route
+              path="/update-profile"
+              element={
+                <ProtectedLayout>
+                  <UpdateProfile />
+                </ProtectedLayout>
+              }
+            />
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </AuthProvider>
   );
