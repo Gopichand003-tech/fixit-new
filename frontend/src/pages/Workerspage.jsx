@@ -163,8 +163,11 @@ const WorkersPage = () => {
 
       {/* Header */}
       <div className="relative z-10 text-center mb-8 px-4">
-        <h2 className="text-4xl md:text-6xl font-extrabold mb-3 bg-gradient-to-r from-blue-700 to-indigo-800 bg-clip-text text-transparent">
-          {selectedProfession === "All" ? "All Services" : selectedProfession}
+<h2 className="text-4xl md:text-6xl font-extrabold 
+               text-white px-8 py-4 rounded-3xl 
+                 bg-gradient-to-r from-blue-700 to-gray-800
+               shadow-lg mt-8 mb-6 mx-auto text-center w-fit">
+                            {selectedProfession === "All" ? "All Services" : selectedProfession}
         </h2>
         <div className="w-16 h-1 bg-gradient-to-r from-blue-500 to-indigo-500 mx-auto mb-4 rounded-full"></div>
         <p className="text-lg text-gray-200 max-w-3xl mx-auto">
