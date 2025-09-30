@@ -30,7 +30,6 @@ import {
   PawPrint,
   AirVent,
   CupSoda,
-  Bus,
   Factory,
   PartyPopper,
   Gift,
@@ -51,6 +50,7 @@ const WorkersPage = () => {
 
   const [filteredWorkers, setFilteredWorkers] = useState([]);
   const [selectedWorker, setSelectedWorker] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // ✅ Profession → Icon mapping
   const professionIcons = {
@@ -116,6 +116,7 @@ const WorkersPage = () => {
   useEffect(() => {
     const fetchWorkers = async () => {
       try {
+        setLoading(true);
         const res = await axios.get(`${API_BASE}/api/providers`);
         const backendWorkers = res.data.map((w) => normalizeWorker(w));
 
@@ -136,6 +137,8 @@ const WorkersPage = () => {
         setFilteredWorkers(filtered);
       } catch (err) {
         console.error("❌ Error fetching workers:", err);
+      } finally {
+        setLoading(false);
       }
     };
     fetchWorkers();
@@ -171,29 +174,22 @@ const WorkersPage = () => {
 
       {/* Worker Cards */}
       <div className="relative z-10 max-w-[1400px] mx-auto px-6 sm:px-8 lg:px-10 py-8">
-        {filteredWorkers.length === 0 ? (
-          <div className="flex justify-center items-center w-full py-20">
-            <p className="text-2xl font-semibold text-gray-200 bg-black/40 backdrop-blur-sm rounded-3xl px-8 py-6 shadow-lg border border-indigo-300">
-              😔 Sorry, no workers are available right now
-              {selectedProfession !== "All" && (
-                <>
-                  {" "}for{" "}
-                  <span className="font-bold text-indigo-300">
-                    {selectedProfession}
-                  </span>
-                </>
-              )}
-              {selectedLocation && (
-                <>
-                  {" "}in{" "}
-                  <span className="font-bold text-indigo-300">
-                    {selectedLocation}
-                  </span>
-                </>
-              )}.
-            </p>
+        {loading ? (
+          // 🔹 Shimmer Loading UI
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 animate-pulse">
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={i}
+                className="rounded-3xl p-6 shadow-lg bg-white/20 backdrop-blur-md h-80"
+              >
+                <div className="w-24 h-24 mx-auto rounded-full bg-gray-300"></div>
+                <div className="mt-4 h-4 bg-gray-300 rounded w-3/4 mx-auto"></div>
+                <div className="mt-2 h-3 bg-gray-300 rounded w-1/2 mx-auto"></div>
+                <div className="mt-2 h-3 bg-gray-300 rounded w-2/3 mx-auto"></div>
+              </div>
+            ))}
           </div>
-        ) : (
+        ) : filteredWorkers.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {filteredWorkers.map((worker) => (
               <div
@@ -227,9 +223,7 @@ const WorkersPage = () => {
                       </span>
                     )}
                   </div>
-                  <h2 className="mt-4 text-2xl font-bold text-pink-800">
-                    {worker.name}
-                  </h2>
+                  <h2 className="mt-4 text-2xl font-bold text-pink-800">{worker.name}</h2>
                   <p className="flex items-center gap-2 text-lg text-indigo-900 font-semibold">
                     <Briefcase className="w-5 h-5" /> {worker.profession}
                   </p>
@@ -266,6 +260,18 @@ const WorkersPage = () => {
                 </div>
               </div>
             ))}
+          </div>
+        ) : (
+          <div className="flex justify-center items-center w-full py-20">
+            <p className="text-2xl font-semibold text-gray-200 bg-black/40 backdrop-blur-sm rounded-3xl px-8 py-6 shadow-lg border border-indigo-300">
+              😔 Sorry, no workers are available right now
+              {selectedProfession !== "All" && (
+                <> for <span className="font-bold text-indigo-300">{selectedProfession}</span></>
+              )}
+              {selectedLocation && (
+                <> in <span className="font-bold text-indigo-300">{selectedLocation}</span></>
+              )}.
+            </p>
           </div>
         )}
       </div>
