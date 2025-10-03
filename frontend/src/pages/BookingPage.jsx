@@ -5,6 +5,7 @@ import { issuesData } from "../data/issueOptions";
 import { toast } from "sonner";
 import Cookies from "js-cookie";
 import axios from "axios";
+import { professionIcons } from "../data/professionIcons"; // ✅ correct spelling
 import {
   MapPin,
   Phone,
@@ -193,17 +194,44 @@ const BookingPage = () => {
                 onError={(e) => { e.target.src = "/images/default-avatar.png"; }}
               />
             </div>
-            <h2 className="text-2xl md:text-5xl font-extrabold text-white mt-6 drop-shadow-md">{worker.name}</h2>
-            <p className="text-base md:text-xl text-yellow-400 capitalize mt-1">{worker.profession}</p>
-            <p className="text-white/90 mt-3 max-w-md text-sm md:text-base">{worker.bio || "No bio available."}</p>
-            <div className="flex items-center gap-2 mt-4 text-white/80 md:text-xl">
+
+            {/* Worker Icon + Name + Profession */}
+<div className="flex flex-col items-center text-center mb-4">
+  {/* Profession Icon Circle
+  <div className="p-3 rounded-full bg-white shadow-md mb-4">
+    {professionIcons[worker.profession] || professionIcons.Default}
+  </div> */}
+
+  {/* Name */}
+  <h2 className="text-2xl md:text-7xl font-extrabold text-white mt-6 drop-shadow-md">
+    {worker.name}
+  </h2>
+
+{/* Profession */}
+<div className="flex items-center justify-center mt-4">
+  <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white shadow-sm">
+    {/* Icon inside white circle */}
+    <div className="w-10 h-10 flex items-center justify-center bg-white border-2 border-gray-200 rounded-full text-gray-600 shadow">
+      {professionIcons[worker.profession] || professionIcons.Default}
+    </div>
+    {/* Profession text */}
+    <span className="text-base md:text-2xl text-yellow-600 font-semibold capitalize">
+      {worker.profession}
+    </span>
+  </div>
+</div>
+
+</div>
+
+            {/* <p className="text-white/90 mt-3 max-w-md text-sm md:text-base">{worker.bio || "No bio available."}</p> */}
+            <div className="flex items-center gap-2 mt-4 text-white/80 md:text-2xl">
               <MapPin className="w-5 h-5" /> <span>{worker.location}</span>
             </div>
-            <div className="flex items-center gap-2 mt-4 text-white/80 md:text-xl">
-              <Timer className="w-5 h-5" /> <span>{worker.experience}</span>
+            <div className="flex items-center gap-2 mt-4 text-white/80 md:text-2xl">
+              <Timer className="w-5 h-9" /> <span>{worker.experience}</span>
             </div>
-            <div className="flex items-center gap-2 mt-2 text-yellow-400 font-semibold text-lg">⭐ {worker.rating || "N/A"}</div>
-            <a href={`tel:${worker.phone}`} className="mt-6 px-6 py-2 bg-white/90 text-purple-700 font-semibold rounded-full shadow-lg hover:bg-white transition-colors">Contact</a>
+            {/* <div className="flex items-center gap-2 mt-2 text-yellow-400 font-semibold text-lg">⭐ {worker.rating || "N/A"}</div> */}
+            <a href={`tel:${worker.phone}`} className="mt-8 px-8 py-4 bg-white/100 text-purple-500 font-semibold rounded-full shadow-lg hover:bg-blue transition-colors">Contact</a>
           </div>
         </div>
 

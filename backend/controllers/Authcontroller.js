@@ -152,6 +152,9 @@ export const resetPasswordRequest = async (req, res) => {
     user.resetOtpExpiry = Date.now() + 10 * 60 * 1000;
     await user.save();
 
+await transporter.verify();
+console.log('✅ SMTP connection verified');
+
     await transporter.sendMail({
       from: `FIX-IT Support <${process.env.EMAIL_USER}>`,
       to: user.email,
@@ -160,9 +163,10 @@ export const resetPasswordRequest = async (req, res) => {
     });
     return res.json({ message: 'OTP sent to email' });
   } catch (err) {
-    console.error('resetPasswordRequest error:', err);
-    return res.status(500).json({ message: 'Failed to send OTP' });
-  }
+  console.error('❌ resetPasswordRequest error:', err.message, err.stack);
+  return res.status(500).json({ message: 'Failed to send OTP', error: err.message });
+}
+
 };
 
 export const resetPassword = async (req, res) => {

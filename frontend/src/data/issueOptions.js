@@ -98,9 +98,9 @@ export const issuesData = {
     { label: "Night Care", price: 1500 },
   ],
   petCare: [
-    { label: "Dog Walking", price: 500 },
-    { label: "Pet Grooming", price: 1200 },
-    { label: "Pet Sitting", price: 1500 },
+    { label: "/Nails cutting", price: 500 },
+    { label: "Shapoo bath", price: 1200 },
+    { label: "Pet grooming", price: 1500 },
   ],
   healthcare: [
     { label: "General Checkup", price: 800 },
@@ -122,4 +122,12 @@ export const issuesData = {
     { label: "Equipment Installation", price: 8000 },
     { label: "Factory Setup", price: 20000 },
   ],
+  Painting: [
+  { label: "Interior Walls", price: 5000 },
+  { label: "Exterior Walls", price: 8000 },
+  { label: "Ceiling Painting", price: 3000 },
+  { label: "Full House Painting", price: 20000 },
+  { label: "Furniture/Trim Painting", price: 4000 },
+]
+
 };

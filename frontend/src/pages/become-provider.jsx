@@ -79,12 +79,13 @@ const API = import.meta.env.VITE_API_URL || VITE_API_URI;
 const handleChange = (e) => {
   let { name, value } = e.target;
 
-  // Auto-add +91 for phone numbers
-  if (name === "phone") {
-    value = value.replace(/\D/g, ""); // remove non-digits
-    if (value.length > 0 && !value.startsWith("91")) value = "91" + value;
-    value = "+" + value;
-  }
+ // Auto-add +91 for phone numbers
+if (name === "phone") {
+  value = value.replace(/\D/g, ""); // remove non-digits
+  if (value.length > 0 && !value.startsWith("91")) value = "91" + value;
+  value = "+91 " + value.slice(2); // add space after +91
+}
+
 
   setFormData({ ...formData, [name]: value });
 };
