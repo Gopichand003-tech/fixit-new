@@ -14,6 +14,7 @@ import notificationsRoutes from "./routes/notifications.js";
 import tasksRoute from "./routes/tasks.js";
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
+import adminRoutes from "./routes/admin.js"
 
 dotenv.config();
 const app = express();
@@ -23,7 +24,7 @@ const __dirname = path.dirname(__filename);
 
 // ---------- Middleware ----------
 app.use(express.json());
-app.use(bodyParser.json());
+// app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(
@@ -54,6 +55,8 @@ app.use("/api/testimonials", testimonialRoutes);
 app.use("/api/bookings", bookingsRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/tasks", tasksRoute); // WhatsApp tasks
+app.use("/api/admin", adminRoutes);
+
 
 // ❌ Remove local uploads static because Cloudinary handles final images
 // app.use("/uploads", express.static(path.join(__dirname, "uploads")));

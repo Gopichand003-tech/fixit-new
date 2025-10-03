@@ -38,6 +38,7 @@ import {
   Timer,
   Tv2,
   Truck,
+  PaintRoller,
 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -56,7 +57,7 @@ const WorkersPage = () => {
   const professionIcons = {
     Carpenter: <Hammer className="w-6 h-6 text-yellow-600" />,
     Plumbing: <Wrench className="w-6 h-6 text-blue-600" />,
-    Painting: <Paintbrush className="w-6 h-6 text-pink-600" />,
+    Painting: <PaintRoller className="w-6 h-6 text-pink-600" />,
     Electrician: <Zap className="w-6 h-6 text-purple-600" />,
     WaterSupplier: <Droplets className="w-6 h-6 text-cyan-500" />,
     InteriorDesigner: <PaintBucket className="w-6 h-6 text-amber-600" />,
@@ -195,73 +196,88 @@ const WorkersPage = () => {
         ) : filteredWorkers.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {filteredWorkers.map((worker) => (
-              <div
-                key={worker.id}
-                className="relative rounded-3xl border border-transparent p-6 flex flex-col justify-between shadow-lg hover:shadow-2xl hover:-translate-y-3 hover:border-indigo-500 hover:ring-4 hover:ring-indigo-100 transition-all duration-300 overflow-hidden"
-                style={{
-                  background: `
-                    linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(133,109,150,0.95) 40%, rgba(224,231,255,1) 100%),
-                    radial-gradient(circle at top left, rgba(6,36,33,0.15), transparent 60%),
-                    radial-gradient(circle at bottom right, rgba(16,185,129,0.15), transparent 60%)
-                  `,
-                  backdropFilter: "blur(12px)",
-                }}
-              >
-                {/* Profession Icon */}
-                <div className="absolute top-4 right-4 bg-white p-2 rounded-full shadow-md">
-                  {professionIcons[worker.profession] || professionIcons.Default}
-                </div>
+           <div
+  key={worker._id || worker.id}
+  className="flex-shrink-0 w-64 relative rounded-3xl border border-gray-200 p-6 flex flex-col justify-between shadow-lg hover:shadow-2xl hover:-translate-y-3 hover:border-indigo-400 hover:ring-4 hover:ring-indigo-100 transition-all duration-300 overflow-hidden"
+  style={{
+    backgroundImage: `url(${worker.image || "/placeholder-bg.jpg"})`,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    backdropFilter: "blur(8px)",
+  }}
+>
+  {/* Overlay for readability */}
+  <div className="absolute inset-0 bg-black/60 rounded-3xl"></div>
 
-                {/* Card Content */}
-                <div className="flex flex-col items-center text-center mb-4">
-                  <div className="relative p-1 rounded-full bg-gradient-to-r from-green-500 to-pink-500 shadow-lg">
-                    <img
-                      src={worker.image}
-                      alt={worker.name}
-                      className="w-32 h-32 rounded-full object-cover border-4 border-white"
-                    />
-                    {worker.available && (
-                      <span className="absolute -bottom-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full shadow">
-                        Active
-                      </span>
-                    )}
-                  </div>
-                  <h2 className="mt-4 text-2xl font-bold text-pink-800">{worker.name}</h2>
-                  <p className="flex items-center gap-2 text-lg text-indigo-900 font-semibold">
-                    <Briefcase className="w-5 h-5" /> {worker.profession}
-                  </p>
-                  <p className="flex items-center gap-2 text-sm text-indigo-900 mt-2">
-                    <Timer className="w-5 h-5 text-blue-500" /> {worker.experience}
-                  </p>
-                  <p className="flex items-center gap-2 text-sm text-indigo-800">
-                    <MapPin className="w-5 h-5 text-orange-800" /> {worker.location}
-                  </p>
-                  <p className="flex items-center gap-2 text-sm font-semibold bg-gradient-to-r from-pink-700 to-purple-700 bg-clip-text text-transparent">
-                    <PhoneCallIcon className="w-5 h-5" /> {worker.phone}
-                  </p>
-                </div>
+  {/* Profession Icon */}
+  <div className="absolute top-4 left-4 bg-white p-2 rounded-full shadow-md z-10">
+    {professionIcons[worker.profession] || professionIcons.Default}
+  </div>
 
-                {/* Buttons */}
-                <div className="mt-5 flex justify-center gap-4">
-                  <button
-                    disabled={!worker.available}
-                    onClick={() => setSelectedWorker(worker)}
-                    className={`px-5 py-2 rounded-full text-sm font-semibold shadow-md ${
-                      worker.available
-                        ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white"
-                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    }`}
-                  >
-                    Book
-                  </button>
-                  <a
-                    href={`tel:${worker.phone}`}
-                    className="px-5 py-2 rounded-full text-sm font-semibold shadow-md bg-gradient-to-r from-purple-500 to-indigo-300 text-white"
-                  >
-                    Call Now
-                  </a>
-                </div>
-              </div>
+  
+
+  {/* Card Body */}
+  <div className="flex flex-col items-center text-center mb-4 relative z-10">
+    <div className="relative p-1 rounded-full bg-gradient-to-r from-green-500 to-pink-500 shadow-lg">
+      <img
+        src={worker.image}
+        alt={worker.name}
+        loading="lazy"
+        className="w-32 h-32 rounded-full object-cover border-4 border-white"
+      />
+      {worker.available && (
+        <span className="absolute -bottom-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full shadow">
+          Active
+        </span>
+      )}
+    </div>
+
+    <h2 className="mt-4 text-2xl font-bold text-white">{worker.name}</h2>
+    <p className="flex items-center gap-2 text-lg text-white font-semibold">
+      <Briefcase className="w-5 h-5" /> {worker.profession}
+    </p>
+    <p className="flex items-center gap-2 text-sm text-white">
+      <Timer className="w-5 h-5 text-blue-200" /> {worker.experience}
+    </p>
+    <p className="flex items-center gap-2 text-sm text-white">
+      <MapPin className="w-5 h-5 text-orange-300" /> {worker.location}
+    </p>
+    <p className="flex items-center gap-2 text-sm font-semibold bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-300">
+      <PhoneCallIcon className="w-5 h-5" /> {worker.phone}
+    </p>
+    <p className={`text-sm mt-1 font-semibold ${worker.available ? "text-green-400" : "text-red-400"}`}>
+      {worker.available ? "Available" : "Not Available"}
+    </p>
+  </div>
+
+  {/* Action Buttons */}
+  <div className="mt-5 flex justify-center gap-4 relative z-10">
+    <button
+      disabled={!worker.available}
+      onClick={() =>
+        // worker.available && navigate(`/booking/${worker._id || worker.id}`, { state: { worker } })
+        setSelectedWorker(worker)
+      }
+      className={`px-5 py-2 rounded-full text-sm font-semibold shadow-md transform transition-all duration-300 ${
+        worker.available
+          ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:scale-105 hover:shadow-lg"
+          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+      }`}
+    >
+      Book
+    </button>
+    <a
+      href={`tel:${worker.phone}`}
+      className={`px-5 py-2 rounded-full text-sm font-semibold shadow-md transform transition-all duration-300 ${
+        worker.available
+          ? "bg-gradient-to-r from-purple-500 to-indigo-300 text-white hover:scale-105 hover:shadow-xl"
+          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+      }`}
+    >
+      Call Now
+    </a>
+  </div>
+</div>
             ))}
           </div>
         ) : (
