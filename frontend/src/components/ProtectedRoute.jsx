@@ -23,7 +23,7 @@ function ProtectedRoute({ children }) {
   }, []);
 
   if (auth === null) return <p>Checking authentication...</p>; // loading state
-  if (!auth) return <Navigate to="/" replace />;
+  if (!auth) return <Navigate to="/dashboard" replace />;
 
   return children;
 }
