@@ -6,8 +6,6 @@ import Headersection from "./components/Header";
 import Hero from "./components/Hero";
 import Servicecategories from "./components/ServiceCategories";
 import Footer from "./components/Footer";
-import ProtectedRoute from "./components/ProtectedRoute";
-import AdminProtectedRoute from "./components/Adminprotected"; // cookie-based admin check
 
 // Lazy-loaded pages
 const LoginRegister = lazy(() => import("./pages/LoginRegister"));
@@ -23,9 +21,15 @@ const BookingPage = lazy(() => import("./pages/BookingPage"));
 const MyBookings = lazy(() => import("./pages/Mybookings"));
 const BookingSubmitted = lazy(() => import("./pages/bookingsubmitted"));
 const ServicesPage = lazy(() => import("./components/Servicepage"));
-const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+// const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 
-// Layout for authenticated users
+// Protected Route
+function ProtectedRoute({ children }) {
+  const token = localStorage.getItem("token");
+  return token ? children : <Navigate to="/" replace />;
+}
+
+// Layout
 function ProtectedLayout({ children }) {
   return (
     <ProtectedRoute>
@@ -42,12 +46,13 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        {/* Wrap all lazy-loaded routes in Suspense */}
         <Suspense fallback={<div className="text-center py-20">Loading...</div>}>
           <Routes>
             {/* Public login/register */}
             <Route path="/" element={<LoginRegister />} />
 
-            {/* User Dashboard */}
+            {/* Dashboard */}
             <Route
               path="/dashboard"
               element={
@@ -57,17 +62,17 @@ function App() {
               }
             />
 
-            {/* Admin Dashboard */}
-            <Route
+            {/* Admin-Dashboard */}
+            {/* <Route
               path="/adminDashbord"
               element={
-                <AdminProtectedRoute>
+                <ProtectedLayout>
                   <AdminDashboard />
-                </AdminProtectedRoute>
+                </ProtectedLayout>
               }
-            />
+            /> */}
 
-            {/* Booking */}
+            {/* Booking (dynamic worker ID) */}
             <Route
               path="/booking/:id"
               element={
@@ -77,7 +82,7 @@ function App() {
               }
             />
 
-            {/* Other pages */}
+            {/* Other Services */}
             <Route
               path="/other-services"
               element={
@@ -94,6 +99,7 @@ function App() {
                 </ProtectedLayout>
               }
             />
+
             <Route
               path="/Mybookings"
               element={
@@ -102,6 +108,8 @@ function App() {
                 </ProtectedLayout>
               }
             />
+
+            {/* Workers */}
             <Route
               path="/workers"
               element={
@@ -110,6 +118,8 @@ function App() {
                 </ProtectedLayout>
               }
             />
+
+            {/* Main Page */}
             <Route
               path="/mainpage"
               element={
@@ -118,6 +128,8 @@ function App() {
                 </ProtectedLayout>
               }
             />
+
+            {/* Testimonials */}
             <Route
               path="/testimonials"
               element={
@@ -126,6 +138,8 @@ function App() {
                 </ProtectedLayout>
               }
             />
+
+            {/* Become Provider */}
             <Route
               path="/become-provider"
               element={
@@ -134,6 +148,8 @@ function App() {
                 </ProtectedLayout>
               }
             />
+
+            {/* Profile Page */}
             <Route
               path="/profilepage"
               element={
@@ -142,6 +158,8 @@ function App() {
                 </ProtectedLayout>
               }
             />
+
+            {/* Home with scroll sections */}
             <Route
               path="/home"
               element={
@@ -157,6 +175,8 @@ function App() {
                 </ProtectedLayout>
               }
             />
+
+            {/* Update Profile */}
             <Route
               path="/update-profile"
               element={

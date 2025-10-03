@@ -124,70 +124,70 @@ export default function LoginRegister() {
       setLoadingReset(false);
     }
   };
-// Admin login - Step 1: Verify credentials
-const handleAdminLogin = async () => {
-  try {
-    if (!adminData.email || !adminData.password) {
-      toast.error("Please fill email and password");
-      return;
-    }
+// // Admin login - Step 1: Verify credentials
+// const handleAdminLogin = async () => {
+//   try {
+//     if (!adminData.email || !adminData.password) {
+//       toast.error("Please fill email and password");
+//       return;
+//     }
 
-    console.log("Admin Login: Sending credentials", adminData);
+//     console.log("Admin Login: Sending credentials", adminData);
 
-    const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/admin/login`, {
-      email: adminData.email,
-      password: adminData.password,
-    });
+//     const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/admin/login`, {
+//       email: adminData.email,
+//       password: adminData.password,
+//     });
 
-    console.log("Admin Login Response:", res.data);
+//     console.log("Admin Login Response:", res.data);
 
-    if (res.data?.tempToken) {
-      // Credentials OK, show security modal
-      setAdminTempToken(res.data.tempToken);
-      setShowAdminSecurity(true);
-      console.log("Temp token received:", res.data.tempToken);
-    } else {
-      toast.error(res.data.message || "Invalid credentials");
-    }
-  } catch (err) {
-    console.error("Admin login error:", err.response?.data || err.message);
-    toast.error(err.response?.data?.message || "Admin login failed");
-  }
-};
+//     if (res.data?.tempToken) {
+//       // Credentials OK, show security modal
+//       setAdminTempToken(res.data.tempToken);
+//       setShowAdminSecurity(true);
+//       console.log("Temp token received:", res.data.tempToken);
+//     } else {
+//       toast.error(res.data.message || "Invalid credentials");
+//     }
+//   } catch (err) {
+//     console.error("Admin login error:", err.response?.data || err.message);
+//     toast.error(err.response?.data?.message || "Admin login failed");
+//   }
+// };
 
-// Step 2: Verify OTP and set httpOnly cookie
-const handleAdminSecuritySubmit = async () => {
-  try {
-    if (!securityKeyInput) {
-      toast.error("Enter security key or OTP");
-      return;
-    }
+// // Step 2: Verify OTP and set httpOnly cookie
+// const handleAdminSecuritySubmit = async () => {
+//   try {
+//     if (!securityKeyInput) {
+//       toast.error("Enter security key or OTP");
+//       return;
+//     }
 
-    console.log("Admin Security Check: Sending tempToken and key", {
-      tempToken: adminTempToken,
-      key: securityKeyInput,
-    });
+//     console.log("Admin Security Check: Sending tempToken and key", {
+//       tempToken: adminTempToken,
+//       key: securityKeyInput,
+//     });
 
-    const res = await axios.post(
-      `${import.meta.env.VITE_API_URL}/api/admin/security-check`,
-      { tempToken: adminTempToken, key: securityKeyInput },
-      { withCredentials: true } // ✅ allow cookies
-    );
+//     const res = await axios.post(
+//       `${import.meta.env.VITE_API_URL}/api/admin/security-check`,
+//       { tempToken: adminTempToken, key: securityKeyInput },
+//       { withCredentials: true } // ✅ allow cookies
+//     );
 
-    console.log("Admin Security Response:", res.data);
+//     console.log("Admin Security Response:", res.data);
 
-    if (res.data.success) {
-      toast.success("Admin login successful ✅");
-      setShowAdminSecurity(false);
-      navigate("/adminDashboard");
-    } else {
-      toast.error(res.data.message || "Invalid security key");
-    }
-  } catch (err) {
-    console.error("Security check error:", err.response?.data || err.message);
-    toast.error(err.response?.data?.message || "Security verification failed");
-  }
-};
+//     if (res.data.success) {
+//       toast.success("Admin login successful ✅");
+//       setShowAdminSecurity(false);
+//       navigate("/adminDashboard");
+//     } else {
+//       toast.error(res.data.message || "Invalid security key");
+//     }
+//   } catch (err) {
+//     console.error("Security check error:", err.response?.data || err.message);
+//     toast.error(err.response?.data?.message || "Security verification failed");
+//   }
+// };
 
 
   return (
@@ -303,74 +303,6 @@ const handleAdminSecuritySubmit = async () => {
                 />
               </div>
             </form>
-
-         {/* Admin toggle */}
-      <p
-        className="text-sm text-red-600 mt-4 cursor-pointer hover:underline text-center"
-        onClick={() => setShowAdminLogin(!showAdminLogin)}
-      >
-        Are you an admin? Click here
-      </p>
-
-      {/* Admin login form */}
-      {showAdminLogin && !showAdminSecurity && (
-        <div className="mt-4 p-6 bg-gray-100 dark:bg-gray-800 rounded-xl shadow-md">
-          <h3 className="text-xl font-bold mb-4 text-center text-red-600">Admin Login</h3>
-          <input
-            type="email"
-            placeholder="Admin Email"
-            value={adminData.email}
-            onChange={(e) => setAdminData({ ...adminData, email: e.target.value })}
-            className="w-full px-4 py-3 mb-3 rounded-lg border"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={adminData.password}
-            onChange={(e) => setAdminData({ ...adminData, password: e.target.value })}
-            className="w-full px-4 py-3 mb-3 rounded-lg border"
-          />
-          <button
-            onClick={handleAdminLogin}
-            className="w-full py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all"
-          >
-            Login as Admin
-          </button>
-        </div>
-      )}
-
-      {/* Admin Security Modal */}
-      {showAdminSecurity && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="w-full max-w-md p-6 bg-white dark:bg-gray-900 rounded-xl shadow-lg">
-            <h3 className="text-xl font-bold mb-4 text-center text-red-600">
-              Admin Security Verification
-            </h3>
-            <input
-              type="text"
-              placeholder="Enter security key / OTP"
-              value={securityKeyInput}
-              onChange={(e) => setSecurityKeyInput(e.target.value)}
-              className="w-full px-4 py-3 mb-4 rounded-lg border"
-            />
-            <div className="flex justify-end gap-4">
-              <button
-                onClick={() => setShowAdminSecurity(false)}
-                className="px-4 py-2 rounded-lg border border-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAdminSecuritySubmit}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
-                Verify
-              </button>
-            </div>
-          </div>
-        </div>
-            )}
-
             <p className="text-center text-blue-800 dark:text-gray-300 mt-6 text-base">
               {isSignup ? "Already have an account?" : "Don't have an account?"}{" "}
               <span
