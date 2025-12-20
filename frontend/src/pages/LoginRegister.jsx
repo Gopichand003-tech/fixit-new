@@ -11,12 +11,7 @@ export default function LoginRegister() {
   const [isSignup, setIsSignup] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ name: "", email: "", password: "" });
-//admin
-   const [showAdminLogin, setShowAdminLogin] = useState(false);
-  const [showAdminSecurity, setShowAdminSecurity] = useState(false);
-  const [adminData, setAdminData] = useState({ email: "", password: "", key: "" });
-  const [adminTempToken, setAdminTempToken] = useState(""); // store token after credentials check
-  const [securityKeyInput, setSecurityKeyInput] = useState("");
+
 
   // Forgot/reset states
   const [forgotEmail, setForgotEmail] = useState("");
@@ -26,6 +21,8 @@ export default function LoginRegister() {
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [loadingForgot, setLoadingForgot] = useState(false);
   const [loadingReset, setLoadingReset] = useState(false);
+  const [loadingAuth, setLoadingAuth] = useState(false);
+
 
   const navigate = useNavigate();
   const { loginUser } = useAuth();
@@ -33,59 +30,78 @@ export default function LoginRegister() {
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
+// signup & signin manuallly
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const endpoint = isSignup ? "/signup" : "/signin";
+  e.preventDefault();
+  if (loadingAuth) return;
 
-      const payload = isSignup
-        ? { name: formData.name, email: formData.email, password: formData.password }
-        : { email: formData.email, password: formData.password };
+  setLoadingAuth(true);
 
-      const { data } = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/auth${endpoint}`,
-        payload,
-        { withCredentials: true, timeout: 15000 }
-      );
+  try {
+    const endpoint = isSignup ? "/signup" : "/signin";
+    const payload = isSignup
+      ? formData
+      : { email: formData.email, password: formData.password };
 
-      if (data.token) {
-        loginUser(data.user, data.token);
-        Cookies.set("token", data.token, { expires: 7, path: "/" });
-        toast.success(`${isSignup ? "Signup" : "Login"} Successful ✅`, {
-          description: `Welcome, ${data.user?.name || "User"}!`,
-          duration: 1000,
-        });
-        navigate("/dashboard");
-      } else {
-        toast.info(data.message || "Success");
+    const { data } = await axios.post(
+      `${import.meta.env.VITE_API_URL}/api/auth${endpoint}`,
+      payload,
+      {
+        withCredentials: true,
+        timeout: 6000, // ⚡ reduced
       }
-    } catch (err) {
-      console.error("Auth error:", err.response?.data || err.message);
-      toast.error(err.response?.data?.message || "Request failed");
-    }
-  };
+    );
 
-  // Google login
+    if (!data?.token) throw new Error("Token missing");
+
+    // Store first (fast)
+    Cookies.set("token", data.token, { expires: 7 });
+    loginUser(data.user, data.token);
+
+    toast.success(`${isSignup ? "Signup" : "Login"} Successful ✅`, {
+      duration: 800,
+    });
+
+    // Navigate AFTER UI updates
+    setTimeout(() => navigate("/dashboard"), 200);
+  } catch (err) {
+    toast.error(err.response?.data?.message || "Authentication failed");
+  } finally {
+    setLoadingAuth(false);
+  }
+};
+
+// Google Login
   const handleGoogleLogin = async (credentialResponse) => {
-    try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/google-login`, {
-        token: credentialResponse.credential,
-      });
+  try {
+    const res = await axios.post(
+      `${import.meta.env.VITE_API_URL}/api/auth/google-login`,
+      {
+        token: credentialResponse.credential, // ✅ request body
+      },
+      {
+        timeout: 15000,            // ✅ axios config
+        withCredentials: true,    // optional but recommended
+      }
+    );
 
-      if (!res.data?.token) throw new Error("No token received from server");
-
-      loginUser(res.data.user, res.data.token);
-      Cookies.set("token", res.data.token, { expires: 7, path: "/" });
-      toast.success("Google Login Successful ✅", {
-        description: `Welcome, ${res.data.user?.name || "User"}!`,
-        duration: 1000,
-      });
-      navigate("/dashboard");
-    } catch (err) {
-      console.error("Google login error:", err.response?.data || err.message);
-      toast.error(err.response?.data?.message || "Google login failed");
+    if (!res.data?.token) {
+      throw new Error("No token received");
     }
-  };
+
+    loginUser(res.data.user, res.data.token);
+    Cookies.set("token", res.data.token, { expires: 7 });
+
+    toast.success("Google Login Successful ✅", { duration: 800 });
+    navigate("/dashboard");
+
+  } catch (err) {
+    console.error("Google login error:", err);
+    toast.error(err.response?.data?.message || "Google login failed");
+  }
+};
+
+console.log("API URL:", import.meta.env.VITE_API_URL);
 
   // Forgot Password
   const handleForgotSubmit = async (e) => {
@@ -105,6 +121,7 @@ export default function LoginRegister() {
     }
   };
 
+  //Reset password
   const handleResetSubmit = async (e) => {
     e.preventDefault();
     if (!otp || !newPassword) return toast.error("Enter OTP and new password");
@@ -124,83 +141,18 @@ export default function LoginRegister() {
       setLoadingReset(false);
     }
   };
-// // Admin login - Step 1: Verify credentials
-// const handleAdminLogin = async () => {
-//   try {
-//     if (!adminData.email || !adminData.password) {
-//       toast.error("Please fill email and password");
-//       return;
-//     }
-
-//     console.log("Admin Login: Sending credentials", adminData);
-
-//     const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/admin/login`, {
-//       email: adminData.email,
-//       password: adminData.password,
-//     });
-
-//     console.log("Admin Login Response:", res.data);
-
-//     if (res.data?.tempToken) {
-//       // Credentials OK, show security modal
-//       setAdminTempToken(res.data.tempToken);
-//       setShowAdminSecurity(true);
-//       console.log("Temp token received:", res.data.tempToken);
-//     } else {
-//       toast.error(res.data.message || "Invalid credentials");
-//     }
-//   } catch (err) {
-//     console.error("Admin login error:", err.response?.data || err.message);
-//     toast.error(err.response?.data?.message || "Admin login failed");
-//   }
-// };
-
-// // Step 2: Verify OTP and set httpOnly cookie
-// const handleAdminSecuritySubmit = async () => {
-//   try {
-//     if (!securityKeyInput) {
-//       toast.error("Enter security key or OTP");
-//       return;
-//     }
-
-//     console.log("Admin Security Check: Sending tempToken and key", {
-//       tempToken: adminTempToken,
-//       key: securityKeyInput,
-//     });
-
-//     const res = await axios.post(
-//       `${import.meta.env.VITE_API_URL}/api/admin/security-check`,
-//       { tempToken: adminTempToken, key: securityKeyInput },
-//       { withCredentials: true } // ✅ allow cookies
-//     );
-
-//     console.log("Admin Security Response:", res.data);
-
-//     if (res.data.success) {
-//       toast.success("Admin login successful ✅");
-//       setShowAdminSecurity(false);
-//       navigate("/adminDashboard");
-//     } else {
-//       toast.error(res.data.message || "Invalid security key");
-//     }
-//   } catch (err) {
-//     console.error("Security check error:", err.response?.data || err.message);
-//     toast.error(err.response?.data?.message || "Security verification failed");
-//   }
-// };
-
 
   return (
-    <div className="w-screen h-screen flex items-center justify-center relative">
+<div className="min-h-screen w-full flex items-center justify-center relative px-3 sm:px-6">
       <Toaster position="top-center" richColors />
       {/* Background animations */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse-slow"></div>
       <div className="absolute bottom-0 right-0 w-[28rem] h-[28rem] bg-blue-500/20 rounded-full blur-3xl animate-pulse-slow delay-1000"></div>
 
       {/* Main Container */}
-      <div className="w-full max-w-8xl bg-gray-500/10 backdrop-blur-2xl rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.3)] flex flex-col md:flex-row border border-white/20">
+      <div className="w-full max-w-6xl bg-gray-500/10 backdrop-blur-2xl rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.3)] flex flex-col md:flex-row border border-white/20">
         {/* Left Section */}
-        <div className="hidden md:flex flex-col justify-start items-center w-3/5 relative h-screen overflow-hidden -translate-x-13">
+<div className="hidden lg:flex flex-col justify-start items-center w-1/2 relative min-h-screen overflow-hidden">
           <video
             src="/bgvideo2.mp4"
             autoPlay
@@ -221,8 +173,8 @@ export default function LoginRegister() {
         </div>
 
         {/* Right Section */}
-        <div className="flex-1 flex items-center justify-center min-h-screen">
-          <div className="w-full max-w-lg p-8 sm:p-12 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-xl shadow-lg -translate-x-10">
+        <div className="flex-1 flex items-center justify-center py-10">
+        <div className="w-full max-w-md sm:max-w-lg p-6 sm:p-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-xl shadow-lg">
             {/* Logo */}
             <div className="flex items-center justify-center mb-7 gap-2">
               <div className="w-20 h-20 rounded-full flex items-center justify-center p-1">
@@ -281,11 +233,13 @@ export default function LoginRegister() {
               </div>
 
               <button
-                type="submit"
-                className="w-full py-3 bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-400 hover:opacity-90 text-white font-semibold rounded-lg transition-transform transform hover:scale-[1.02] shadow-lg hover:shadow-xl"
-              >
-                {isSignup ? "Sign Up" : "Login"}
-              </button>
+  type="submit"
+  disabled={loadingAuth}
+  className="w-full py-3 bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-400 text-white font-semibold rounded-lg transition-all disabled:opacity-60"
+>
+  {loadingAuth ? "Please wait..." : isSignup ? "Sign Up" : "Login"}
+</button>
+
 
               {!isSignup && (
                 <p
