@@ -105,7 +105,7 @@ const BookingPage = () => {
     formattedWorkerPhone = "+" + formattedWorkerPhone;
 
     const bookingData = {
-      workerId: worker._id,
+     workerId: worker.id || worker._id,
       workerName: worker.name,
       workerPhone: formattedWorkerPhone,
       issue: selectedIssue.label,
@@ -142,7 +142,8 @@ const BookingPage = () => {
         await axios.post(
           `${import.meta.env.VITE_API_URL}/api/notifications`,
           {
-            workerId: worker._id,
+           workerId: worker.id || worker._id,
+
             message: `New booking from ${userName} for ${selectedIssue.label} at ${timeSlot}`,
           },
           { headers: getAuthHeaders() }
