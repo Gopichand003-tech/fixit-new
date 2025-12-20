@@ -1,79 +1,82 @@
-import express from "express";
-import twilio from "twilio";
-import dotenv from "dotenv";
 
-dotenv.config();
+import express from "express";
+import nodemailer from "nodemailer";
+
 const router = express.Router();
 
-const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH);
+/* ---------------- In-Memory OTP Store ---------------- */
+// email -> { otp, expiresAt }
+const otpStore = new Map();
 
-
-// Temporary in-memory OTP store
-const otpStore = {};
-
-// Format phone to E.164 (default +91)
-const formatPhone = (phone, countryCode = "+91") => {
-  return phone.startsWith("+") ? phone : `${countryCode}${phone}`;
-};
-
-// ✅ Send OTP
-router.post("/send-otp", async (req, res) => {
-  try {
-    const { phone } = req.body;
-    if (!phone) return res.status(400).json({ message: "Phone is required" });
-
-    // Use let, since we are storing it later
-    let otp = Math.floor(100000 + Math.random() * 900000);
-
-    const formattedPhone = formatPhone(phone);
-
-    // Save OTP with expiry
-    otpStore[formattedPhone] = {
-      otp,
-      expiresAt: Date.now() + 5 * 60 * 1000, // 5 min
-    };
-
-    // Send SMS
-    await client.messages.create({
-      body: `This is from  FIXIT Service and Your OTP is ${otp}`,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: formattedPhone,
-    });
-
-    console.log("OTP sent:", otp);
-    res.json({ success: true, message: "OTP sent successfully" });
-  } catch (err) {
-    console.error("Error sending OTP:", {
-  code: err.code,
-  message: err.message,
-  moreInfo: err.moreInfo,
-  stack: err.stack
+/* ---------------- Mail Transporter ---------------- */
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
 });
 
+/* ---------------- Send OTP ---------------- */
+router.post("/send-otp", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email)
+      return res.status(400).json({ message: "Email is required" });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    otpStore.set(email, {
+      otp,
+      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+    });
+
+    await transporter.sendMail({
+      from: `"FIXIT" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Your FIXIT OTP Verification Code",
+      html: `
+        <div style="font-family: Arial; padding: 20px;">
+          <h2> OTP Verification</h2>
+          <p>Your OTP code is:</p>
+          <h1 style="letter-spacing:4px;">${otp}</h1>
+          <p>This OTP is valid for <b>5 minutes</b>.</p>
+          <p>If you didn't request this, ignore this email.</p>
+        </div>
+      `,
+    });
+
+    res.json({ message: "OTP sent to email" });
+  } catch (err) {
+    console.error("❌ Send OTP Error:", err);
     res.status(500).json({ message: "Failed to send OTP" });
   }
 });
 
-// ✅ Verify OTP
+/* ---------------- Verify OTP ---------------- */
 router.post("/verify-otp", (req, res) => {
-  try {
-    const { phone, otp } = req.body;
-    if (!phone || !otp) return res.status(400).json({ message: "Phone and OTP required" });
+  const { email, otp } = req.body;
 
-    const formattedPhone = formatPhone(phone);
-    const stored = otpStore[formattedPhone];
+  if (!email || !otp)
+    return res.status(400).json({ message: "Email & OTP required" });
 
-    if (!stored) return res.status(400).json({ message: "OTP not found" });
-    if (stored.expiresAt < Date.now()) return res.status(400).json({ message: "OTP expired" });
-    if (stored.otp != otp) return res.status(400).json({ message: "Invalid OTP" });
+  const record = otpStore.get(email);
 
-    delete otpStore[formattedPhone]; // remove after verification
+  if (!record)
+    return res.status(400).json({ message: "OTP not found" });
 
-    res.json({ success: true, message: "OTP verified successfully" });
-  } catch (err) {
-    console.error("Error verifying OTP:", err.message);
-    res.status(500).json({ message: "Failed to verify OTP" });
+  if (Date.now() > record.expiresAt) {
+    otpStore.delete(email);
+    return res.status(400).json({ message: "OTP expired" });
   }
+
+  if (record.otp !== otp)
+    return res.status(400).json({ message: "Invalid OTP" });
+
+  otpStore.delete(email);
+
+  res.json({ success: true, message: "OTP verified successfully" });
 });
 
 export default router;
