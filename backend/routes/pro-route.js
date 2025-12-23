@@ -4,41 +4,24 @@ import { uploadProviderFiles } from "../utils/cloudinary.js";
 
 const router = express.Router();
 
-/* ---------------------- Helper ---------------------- */
-const getCloudUrl = (fileArr) =>
-  fileArr?.[0]?.secure_url || fileArr?.[0]?.path || "";
+/* Helper */
+const normalizePhone = (phone) => {
+  let clean = phone.replace(/\D/g, "");
+  if (!clean.startsWith("91")) clean = "91" + clean;
+  return clean;
+};
 
-/* ---------------------- Routes ---------------------- */
-
-/* 1️⃣ Search providers */
-router.get("/search", async (req, res) => {
-  try {
-    const { location, service } = req.query;
-    const filter = {};
-
-    if (location) filter.location = { $regex: location, $options: "i" };
-    if (service) filter.service = { $regex: service, $options: "i" };
-
-    const providers = await Provider.find(filter);
-    res.json(providers);
-  } catch (err) {
-    console.error("Search Error:", err);
-    res.status(500).json({ message: "Failed to search providers" });
-  }
-});
-
-/* 2️⃣ Get all providers */
+/* ---------------- Get All Providers ---------------- */
 router.get("/", async (_req, res) => {
   try {
     const providers = await Provider.find();
     res.json(providers);
   } catch (err) {
-    console.error("Fetch Error:", err);
     res.status(500).json({ message: "Failed to fetch providers" });
   }
 });
 
-/* 3️⃣ Register provider */
+/* ---------------- Register Provider ---------------- */
 router.post(
   "/",
   uploadProviderFiles.fields([
@@ -48,143 +31,73 @@ router.post(
   ]),
   async (req, res) => {
     try {
-      console.log("REQ BODY:", req.body);
-      console.log("FILES:", req.files);
-
       const provider = await Provider.create({
         name: req.body.name,
-        email: req.body.email,              // ✅ REQUIRED
-        phone: req.body.phone,              // ✅ REQUIRED
+        email: req.body.email,
+        phone: normalizePhone(req.body.phone),
         service: req.body.service,
         experience: req.body.experience,
         location: req.body.location,
-
         documents: {
-          photo: getCloudUrl(req.files?.photo),
-          aadhaar: getCloudUrl(req.files?.aadhaar),
-          pancard: getCloudUrl(req.files?.pancard),
+          photo: req.files?.photo?.[0]?.secure_url,
+          aadhaar: req.files?.aadhaar?.[0]?.secure_url,
+          pancard: req.files?.pancard?.[0]?.secure_url,
         },
-
-        emailVerified: true,                 // ✅ since OTP already verified
-        membershipPaid: false,
+        emailVerified: true,
       });
 
-      res.status(201).json({
-        success: true,
-        message: "Provider registered successfully",
-        provider,
-      });
+      res.status(201).json({ success: true, provider });
     } catch (err) {
-      console.error("❌ Provider Create Error:", err);
-      res.status(500).json({
-        success: false,
-        message: err.message,
-      });
+      res.status(500).json({ success: false, message: err.message });
     }
   }
 );
 
-/* 4️⃣ Update membership */
-router.patch("/:id/membership", async (req, res) => {
-  try {
-    const provider = await Provider.findByIdAndUpdate(
-      req.params.id,
-      { membershipPaid: req.body.membershipPaid },
-      { new: true }
-    );
-
-    if (!provider) {
-      return res.status(404).json({ message: "Provider not found" });
-    }
-
-    res.json({ message: "Membership updated", provider });
-  } catch (err) {
-    console.error("Membership Update Error:", err);
-    res.status(500).json({ message: "Failed to update membership" });
-  }
-});
-
-/* 5️⃣ Delete provider (Admin only) */
-router.delete("/:id", async (req, res) => {
-  try {
-    const isAdmin =
-      req.headers["x-admin-secret"] === process.env.ADMIN_SECRET;
-
-    if (!isAdmin) {
-      return res.status(403).json({ message: "Only admin can delete providers" });
-    }
-
-    const provider = await Provider.findByIdAndDelete(req.params.id);
-
-    if (!provider) {
-      return res.status(404).json({ message: "Provider not found" });
-    }
-
-    res.json({ message: "Provider deleted successfully" });
-  } catch (err) {
-    console.error("Delete Error:", err);
-    res.status(500).json({ message: "Failed to delete provider" });
-  }
-});
-
-// status badge
-router.patch("/:id/heartbeat", async (req, res) => {
-  try {
-    await Provider.findByIdAndUpdate(req.params.id, {
-      lastSeen: new Date(),
-    });
-    res.sendStatus(204);
-  } catch (err) {
-    res.status(500).json({ message: "Heartbeat failed" });
-  }
-});
-
-// Whatsapp webhook
+/* ---------------- WhatsApp Webhook ---------------- */
 router.post("/whatsapp", async (req, res) => {
   try {
-    const from = req.body.From;          // whatsapp:+91XXXXXXXXXX
     const body = req.body.Body?.trim().toUpperCase();
-
-    const phone = from.replace("whatsapp:", "");
+    const raw = req.body.From.replace(/\D/g, "");
+    const phone = raw.startsWith("91") ? raw : "91" + raw;
 
     const provider = await Provider.findOne({ phone });
 
     if (!provider) {
       return res.send(`
         <Response>
-          <Message>You are not registered as a provider.</Message>
+          <Message>❌ You are not registered as a FixIt service provider.</Message>
         </Response>
       `);
     }
 
     if (body === "START") {
-      provider.lastSeen = new Date();
+      provider.isOnline = true;
       await provider.save();
 
       return res.send(`
         <Response>
-          <Message>You are now ONLINE ✅</Message>
+          <Message>📩 Availability Activated
+
+You are now ONLINE 🟢
+Customers can view your profile and send service requests.
+
+Type *LEAVE* anytime to go offline.</Message>
         </Response>
       `);
     }
 
-    if (body === "STOP") {
-      provider.lastSeen = new Date(0); // force offline
+    if (body === "STOP" || body === "LEAVE") {
+      provider.isOnline = false;
       await provider.save();
 
       return res.send(`
         <Response>
-          <Message>You are now OFFLINE ❌</Message>
-        </Response>
-      `);
-    }
+          <Message>📩 Status Updated
 
-    if (body === "STATUS") {
-      const online = provider.isOnline ? "ONLINE ✅" : "OFFLINE ❌";
+You are now OFFLINE 🔴
+You will not receive new booking requests.
 
-      return res.send(`
-        <Response>
-          <Message>Your status: ${online}</Message>
+Type *START* to go online again.</Message>
         </Response>
       `);
     }
@@ -194,21 +107,18 @@ router.post("/whatsapp", async (req, res) => {
         <Message>
 Commands:
 START – Go Online
-STOP – Go Offline
-STATUS – Check status
+STOP / LEAVE – Go Offline
         </Message>
       </Response>
     `);
-
   } catch (err) {
     console.error(err);
-    res.send(`
+    return res.send(`
       <Response>
-        <Message>Server error. Try again later.</Message>
+        <Message>⚠️ Server error. Try again later.</Message>
       </Response>
     `);
   }
 });
-
 
 export default router;

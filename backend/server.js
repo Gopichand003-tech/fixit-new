@@ -25,14 +25,15 @@ const __dirname = path.dirname(__filename);
 // ---------- Middleware ----------
 app.use(express.json());
 app.use(bodyParser.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(
   cors({
     origin: [
       "https://fixit-x9f3.onrender.com",
       "http://localhost:5000",
-      "http://localhost:5173"
+      "http://localhost:5173",
+      "https://maxie-postacetabular-novelistically.ngrok-free.dev"
     ],
     credentials: true,
   })
