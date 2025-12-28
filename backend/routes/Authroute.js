@@ -3,8 +3,6 @@ import {
   userSignup, 
   userSignin, 
   googleLogin, 
-  resetPasswordRequest, 
-  resetPassword, 
   updateProfile, 
   uploadAvatar, 
   uploadToCloudinary 
@@ -16,9 +14,8 @@ const router = express.Router();
 /* ---------------------------- Public Routes --------------------------- */
 router.post('/signup', userSignup);
 router.post('/signin', userSignin);
-router.post('/google-login', googleLogin);
-router.post('/reset-password-request', resetPasswordRequest);
-router.post('/reset-password', resetPassword);
+router.post('/google-login', googleLogin); 
+
 
 /* ---------------------------- Protected Routes ------------------------ */
 // Update profile: protected, supports avatar upload

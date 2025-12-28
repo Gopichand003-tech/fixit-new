@@ -9,7 +9,17 @@ const bookingSchema = new mongoose.Schema({
   workerPhone: { type: String, required: true },
 
 
-  issue: { type: String, required: true },
+  issues: [
+      {
+        label: { type: String, required: true },
+        price: { type: Number, required: true },
+      },
+    ],
+
+      // ✅ BACKWARD COMPATIBILITY
+    issue: { type: String },   // comma-separated labels
+    price: { type: Number },   // total price
+    
   price: { type: Number, required: true },
 
   userId: {

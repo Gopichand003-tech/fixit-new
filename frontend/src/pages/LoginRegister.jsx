@@ -12,7 +12,6 @@ export default function LoginRegister() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ name: "", email: "", password: "" });
 
-
   // Forgot/reset states
   const [forgotEmail, setForgotEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -22,7 +21,8 @@ export default function LoginRegister() {
   const [loadingForgot, setLoadingForgot] = useState(false);
   const [loadingReset, setLoadingReset] = useState(false);
   const [loadingAuth, setLoadingAuth] = useState(false);
-
+const [resendTimer, setResendTimer] = useState(0);
+const [canResend, setCanResend] = useState(true);
 
   const navigate = useNavigate();
   const { loginUser } = useAuth();
@@ -30,10 +30,16 @@ export default function LoginRegister() {
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-// signup & signin manuallly
-  const handleSubmit = async (e) => {
+  /* ================= MANUAL LOGIN ================= */
+ const handleSubmit = async (e) => {
   e.preventDefault();
   if (loadingAuth) return;
+
+  // 🔐 Password validation
+  if (formData.password.length < 8) {
+    toast.error("Password must be at least 8 characters");
+    return;
+  }
 
   setLoadingAuth(true);
 
@@ -46,15 +52,11 @@ export default function LoginRegister() {
     const { data } = await axios.post(
       `${import.meta.env.VITE_API_URL}/api/auth${endpoint}`,
       payload,
-      {
-        withCredentials: true,
-        timeout: 6000, // ⚡ reduced
-      }
+      { withCredentials: true, timeout: 6000 }
     );
 
     if (!data?.token) throw new Error("Token missing");
 
-    // Store first (fast)
     Cookies.set("token", data.token, { expires: 7 });
     loginUser(data.user, data.token);
 
@@ -62,7 +64,6 @@ export default function LoginRegister() {
       duration: 800,
     });
 
-    // Navigate AFTER UI updates
     setTimeout(() => navigate("/dashboard"), 200);
   } catch (err) {
     toast.error(err.response?.data?.message || "Authentication failed");
@@ -71,88 +72,130 @@ export default function LoginRegister() {
   }
 };
 
-// Google Login
+  /* ================= GOOGLE LOGIN ================= */
   const handleGoogleLogin = async (credentialResponse) => {
+    try {
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/auth/google-login`,
+        { token: credentialResponse.credential },
+        { timeout: 15000, withCredentials: true }
+      );
+
+      loginUser(res.data.user, res.data.token);
+      Cookies.set("token", res.data.token, { expires: 7 });
+
+      toast.success("Google Login Successful ✅", { duration: 800 });
+      navigate("/dashboard");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Google login failed");
+    }
+  };
+
+  /* ================= FORGOT PASSWORD ================= */
+ const handleForgotSubmit = async (e) => {
+  e.preventDefault();
+  if (!forgotEmail) return toast.error("Enter email");
+
+  setLoadingForgot(true);
+
   try {
-    const res = await axios.post(
-      `${import.meta.env.VITE_API_URL}/api/auth/google-login`,
-      {
-        token: credentialResponse.credential, // ✅ request body
-      },
-      {
-        timeout: 15000,            // ✅ axios config
-        withCredentials: true,    // optional but recommended
-      }
+    await axios.post(
+      `${import.meta.env.VITE_API_URL}/api/auth/reset-password-request`,
+      { email: forgotEmail }
     );
 
-    if (!res.data?.token) {
-      throw new Error("No token received");
-    }
+    toast.success("OTP sent to email");
 
-    loginUser(res.data.user, res.data.token);
-    Cookies.set("token", res.data.token, { expires: 7 });
+    // reset fields
+    setOtp("");
+    setNewPassword("");
 
-    toast.success("Google Login Successful ✅", { duration: 800 });
-    navigate("/dashboard");
+    // start resend timer
+    setCanResend(false);
+    setResendTimer(60);
 
+    const interval = setInterval(() => {
+      setResendTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setCanResend(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    setForgotModalOpen(false);
+    setResetModalOpen(true);
   } catch (err) {
-    console.error("Google login error:", err);
-    toast.error(err.response?.data?.message || "Google login failed");
+    toast.error(err.response?.data?.message || "Error sending OTP");
+  } finally {
+    setLoadingForgot(false);
   }
 };
 
-console.log("API URL:", import.meta.env.VITE_API_URL);
+/* ================= RESET PASSWORD ================= */
+const handleResetSubmit = async (e) => {
+  e.preventDefault();
 
-  // Forgot Password
-  const handleForgotSubmit = async (e) => {
-    e.preventDefault();
-    if (!forgotEmail) return toast.error("Please enter your email");
-    setLoadingForgot(true);
-    try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/reset-password-request`, { email: forgotEmail });
-      toast.success("OTP sent to your email");
-      setForgotModalOpen(false);
-      setResetModalOpen(true);
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || "Error sending OTP");
-    } finally {
-      setLoadingForgot(false);
-    }
-  };
+  if (!otp || !newPassword) {
+    toast.error("Please fill all fields");
+    return;
+  }
 
-  //Reset password
-  const handleResetSubmit = async (e) => {
-    e.preventDefault();
-    if (!otp || !newPassword) return toast.error("Enter OTP and new password");
-    setLoadingReset(true);
-    try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/reset-password`, {
+  if (newPassword.length < 8) {
+    toast.error("Password must be at least 8 characters");
+    return;
+  }
+
+  setLoadingReset(true);
+
+  try {
+    await axios.post(
+      `${import.meta.env.VITE_API_URL}/api/auth/reset-password`,
+      {
         email: forgotEmail,
         otp,
         newPassword,
-      });
-      toast.success("Password reset successful, please login");
-      setResetModalOpen(false);
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || "Error resetting password");
-    } finally {
-      setLoadingReset(false);
-    }
-  };
+      }
+    );
+
+    toast.success("Password reset successful ✅");
+
+    // cleanup + close modal
+    setOtp("");
+    setNewPassword("");
+    setForgotEmail("");
+    setResetModalOpen(false);
+  } catch (err) {
+    toast.error(err.response?.data?.message || "Reset failed");
+  } finally {
+    setLoadingReset(false);
+  }
+};
 
   return (
-<div className="min-h-screen w-full flex items-center justify-center relative px-3 sm:px-6">
-      <Toaster position="top-center" richColors />
-      {/* Background animations */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse-slow"></div>
-      <div className="absolute bottom-0 right-0 w-[28rem] h-[28rem] bg-blue-500/20 rounded-full blur-3xl animate-pulse-slow delay-1000"></div>
+<div className="min-h-screen w-full flex sm:items-center justify-center px-4 py-6 overflow-y-auto bg-gray-100">
+  
+  {loadingAuth && (
+  <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center">
+    <div className="bg-white px-6 py-4 rounded-xl shadow-lg font-semibold">
+      Please wait…
+    </div>
+  </div>
+)}
 
-      {/* Main Container */}
-      <div className="w-full max-w-6xl bg-gray-500/10 backdrop-blur-2xl rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.3)] flex flex-col md:flex-row border border-white/20">
-        {/* Left Section */}
-<div className="hidden lg:flex flex-col justify-start items-center w-1/2 relative min-h-screen overflow-hidden">
+      <Toaster position="top-center" richColors />
+
+      {/* Background blobs */}
+      <div className="absolute top-0 left-0 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
+
+      {/* Main Card */}
+      <div className="w-full max-w-6xl bg-gray-500/10 backdrop-blur-2xl rounded-3xl overflow-hidden shadow-2xl flex flex-col lg:flex-row border border-white/20">
+
+        {/* Left Video (Desktop only) */}
+        <div className="hidden lg:flex w-1/2 relative overflow-hidden">
           <video
             src="/bgvideo2.mp4"
             autoPlay
@@ -161,36 +204,56 @@ console.log("API URL:", import.meta.env.VITE_API_URL);
             playsInline
             className="absolute inset-0 w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-black/15"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center z-10 px-4">
-            <h1 className="text-5xl md:text-6xl font-bold text-white">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="relative z-10 m-auto text-center text-white px-6">
+            <h1 className="text-5xl font-bold">
               {isSignup ? "Join Us" : "Welcome Back"}
             </h1>
-            <p className="mt-4 text-gray-200 text-lg md:text-xl">
-              {isSignup ? "Sign up to unlock premium features." : "Log in to access your dashboard."}
+            <p className="mt-4 text-lg">
+              {isSignup ? "Create an account to continue" : "Login to your dashboard"}
             </p>
           </div>
         </div>
 
-        {/* Right Section */}
-        <div className="flex-1 flex items-center justify-center py-10">
-        <div className="w-full max-w-md sm:max-w-lg p-6 sm:p-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-xl shadow-lg">
+        {/* Right Form */}
+        <div className="flex-1 flex items-center justify-center px-2 py-6">
+          <div className="w-full max-w-md bg-white/90 dark:bg-gray-900/90 rounded-2xl px-5 py-6 sm:px-8 sm:py-8 shadow-lg">
+
             {/* Logo */}
-            <div className="flex items-center justify-center mb-7 gap-2">
-              <div className="w-20 h-20 rounded-full flex items-center justify-center p-1">
-                <img src="/FIXIT1.png" alt="FIXIT Logo" className="w-full h-full object-contain rounded-full border-4 border-orange-500" />
-              </div>
-              <h1 className="text-4xl font-extrabold bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-400 bg-clip-text text-transparent">
-                FIXIT
-              </h1>
+            <div className="flex justify-center items-center gap-3 mb-3 justify-start px-4 sm:px-16 py-6 ">
+<div className="w-10 h-10 sm:w-20 sm:h-20 rounded-full p-[3px]
+  bg-gradient-to-br from-black via-yellow-400 to-black
+  shadow-[0_0_20px_rgba(255,215,0,0.5)]
+">
+  <video
+    src="/mainpage.mp4"
+    autoPlay
+    loop
+    muted
+    playsInline
+    className="w-full h-full rounded-full object-cover bg-white"
+  />
+</div>
+             <span className="text-2xl sm:text-5xl font-black tracking-wider">
+  <span className="text-black drop-shadow-[0_3px_3px_rgba(0,0,0,0.5)]">
+    FIX
+  </span>
+  <span className="text-yellow-400 
+    drop-shadow-[0_0_8px_rgba(250,204,21,0.9)] 
+    drop-shadow-[0_0_16px_rgba(250,204,21,0.7)]
+    drop-shadow-[0_0_28px_rgba(250,204,21,0.5)]
+  ">
+    IT
+  </span>
+</span>
+
             </div>
 
-            {/* Form Heading */}
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-center mb-6">
               {isSignup ? "Create Account" : "Sign In"}
             </h2>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {isSignup && (
                 <input
                   type="text"
@@ -198,160 +261,208 @@ console.log("API URL:", import.meta.env.VITE_API_URL);
                   placeholder="Full Name"
                   value={formData.name}
                   onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 rounded-lg bg-gray-100/60 dark:bg-gray-800/60 text-gray-900 dark:text-white border border-gray-300/40 focus:ring-4 focus:ring-purple-500 outline-none"
+className="
+  w-full
+  px-4 sm:px-5
+  py-3.5
+  text-[15px] sm:text-base
+  rounded-xl
+  bg-gray-100
+  border border-gray-200
+  focus:border-purple-500
+  focus:ring-2 focus:ring-purple-500/40
+  outline-none
+  transition-all
+"
                 />
               )}
 
               <input
                 type="email"
                 name="email"
-                placeholder="Email Address"
+                placeholder="Email"
                 value={formData.email}
                 onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-lg bg-gray-100/60 dark:bg-gray-800/60 text-gray-900 dark:text-white border border-gray-300/40 focus:ring-4 focus:ring-purple-500 outline-none"
+                className="w-full px-4 py-3 text-sm sm:text-base rounded-lg bg-gray-100 focus:ring-4 focus:ring-purple-500 outline-none"
               />
 
-              <div className="flex items-center gap-2">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  placeholder="Password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 rounded-lg bg-gray-100/80 dark:bg-gray-800/80 text-gray-900 dark:text-white shadow-sm transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-white dark:focus:bg-gray-700 focus:ring-4 focus:ring-purple-500 outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-gray-500 hover:text-gray-800"
-                >
-                  {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
-                </button>
-              </div>
+              <div className="space-y-1">
+  {/* Input row */}
+<div className="relative">
+    <input
+      type={showPassword ? "text" : "password"}
+      name="password"
+      placeholder="Password (min 8 characters)"
+      value={formData.password}
+      onChange={handleChange}
+      minLength={8}
+      required
+     className="
+  w-full
+  px-4 sm:px-5
+  py-3.5
+  pr-12
+  text-[15px] sm:text-base
+  rounded-xl
+  bg-gray-100
+  border border-gray-200
+  focus:border-purple-500
+  focus:ring-2 focus:ring-purple-500/40
+  outline-none
+"
+
+    />
+
+    <button
+      type="button"
+      onClick={() => setShowPassword(!showPassword)}
+className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
+    >
+      {showPassword ? <FiEyeOff /> : <FiEye />}
+    </button>
+  </div>
+
+  {/* Error message */}
+  {formData.password && formData.password.length < 8 && (
+    <p className="text-xs text-red-500 ml-1">
+      Password must be at least 8 characters
+    </p>
+  )}
+</div>
 
               <button
-  type="submit"
-  disabled={loadingAuth}
-  className="w-full py-3 bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-400 text-white font-semibold rounded-lg transition-all disabled:opacity-60"
->
-  {loadingAuth ? "Please wait..." : isSignup ? "Sign Up" : "Login"}
-</button>
-
+                type="submit"
+                disabled={loadingAuth}
+className="
+  w-full
+  py-3.5
+  rounded-xl
+  text-white
+  font-semibold
+  tracking-wide
+  bg-gradient-to-r from-gray-700  to-yellow-500
+  shadow-lg shadow-purple-500/30
+  hover:shadow-xl hover:scale-[1.02]
+  active:scale-[0.98]
+  transition-all duration-200
+  disabled:opacity-60
+"
+              >
+                {loadingAuth ? "Please wait..." : isSignup ? "Sign Up" : "Login"}
+              </button>
 
               {!isSignup && (
-                <p
-                  onClick={() => setForgotModalOpen(true)}
-                  className="text-sm text-purple-500 hover:underline cursor-pointer text-center"
-                >
-                  Forgot Password?
-                </p>
+                <button
+  type="button"
+  onClick={() => setForgotModalOpen(true)}
+  className="block mx-auto text-sm text-purple-500 hover:underline"
+>
+  Forgot Password?
+</button>
+
               )}
 
-              <div className="flex justify-center mt-4">
+              <div className="flex justify-center mt-4 scale-95 sm:scale-100 ">
                 <GoogleLogin
                   onSuccess={handleGoogleLogin}
                   onError={() => toast.error("Google login failed")}
                 />
               </div>
             </form>
-            <p className="text-center text-blue-800 dark:text-gray-300 mt-6 text-base">
+
+            <p className="text-center mt-6 text-sm">
               {isSignup ? "Already have an account?" : "Don't have an account?"}{" "}
               <span
                 onClick={() => setIsSignup(!isSignup)}
-                className="text-purple-900 hover:underline cursor-pointer  text-base font-medium"
+                className="text-purple-600 font-medium cursor-pointer hover:underline"
               >
                 {isSignup ? "Sign In" : "Sign Up"}
               </span>
             </p>
           </div>
         </div>
-
-        {/* Forgot Password Modal */}
-        {forgotModalOpen && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="w-full max-w-md p-6 bg-white dark:bg-gray-900 rounded-xl shadow-lg">
-              <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                Forgot Password
-              </h3>
-              <form onSubmit={handleForgotSubmit} className="space-y-4">
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={forgotEmail}
-                  onChange={(e) => setForgotEmail(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 rounded-lg bg-gray-100/60 dark:bg-gray-800/60 border"
-                />
-                <div className="flex justify-end gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setForgotModalOpen(false)}
-                    className="px-4 py-2 rounded-lg border border-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loadingForgot}
-                    className="px-4 py-2 bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-400 text-white rounded-lg hover:opacity-90"
-                  >
-                    {loadingForgot ? "Sending..." : "Send OTP"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Reset Password Modal */}
-        {resetModalOpen && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="w-full max-w-md p-6 bg-white dark:bg-gray-900 rounded-xl shadow-lg">
-              <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                Enter OTP & New Password
-              </h3>
-              <form onSubmit={handleResetSubmit} className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="Enter OTP"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 rounded-lg bg-gray-100/60 dark:bg-gray-800/60 border"
-                />
-                <input
-                  type="password"
-                  placeholder="New Password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 rounded-lg bg-gray-100/60 dark:bg-gray-800/60 border"
-                />
-                <div className="flex justify-end gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setResetModalOpen(false)}
-                    className="px-4 py-2 rounded-lg border border-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loadingReset}
-                    className="px-4 py-2 bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-400 text-white rounded-lg hover:opacity-90"
-                  >
-                    {loadingReset ? "Resetting..." : "Reset Password"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
       </div>
+
+      {/* ===== Modals ===== */}
+      {(forgotModalOpen || resetModalOpen) && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-3 overflow-y-auto">
+          <div className="w-full max-w-md bg-white dark:bg-gray-900 p-5 rounded-xl shadow-lg">
+            {forgotModalOpen ? (
+              <>
+                <h3 className="text-xl font-semibold mb-4">Forgot Password</h3>
+                <form
+  onSubmit={(e) => {
+    e.preventDefault();
+    handleForgotSubmit(e);
+  }}
+  className="space-y-4"
+>
+  <input
+    type="email"
+    placeholder="Enter email"
+    value={forgotEmail}
+    onChange={(e) => setForgotEmail(e.target.value)}
+    className="w-full px-4 py-3 rounded-lg bg-gray-100"
+  />
+
+  <button
+    type="submit"
+    disabled={loadingForgot}
+    className="w-full py-2 bg-purple-600 text-white rounded-lg disabled:opacity-60"
+  >
+    {loadingForgot ? "Sending..." : "Send OTP"}
+  </button>
+</form>
+
+              </>
+            ) : (
+              <>
+                <h3 className="text-xl font-semibold mb-4">Reset Password</h3>
+                <form
+  onSubmit={(e) => {
+    e.preventDefault();
+    handleResetSubmit(e);
+  }}
+  className="space-y-4"
+>
+  <input
+    placeholder="Enter OTP"
+    value={otp}
+    onChange={(e) => setOtp(e.target.value)}
+    className="w-full px-4 py-3 rounded-lg bg-gray-100"
+  />
+
+  <input
+    type="password"
+    placeholder="New Password (min 8 chars)"
+    value={newPassword}
+    onChange={(e) => setNewPassword(e.target.value)}
+    className="w-full px-4 py-3 rounded-lg bg-gray-100"
+  />
+
+  <button
+    type="submit"
+    disabled={loadingReset}
+    className="w-full py-2 bg-purple-600 text-white rounded-lg disabled:opacity-60"
+  >
+    {loadingReset ? "Resetting..." : "Reset Password"}
+  </button>
+
+  {/* Resend OTP */}
+  <button
+    type="button"
+    disabled={!canResend}
+    onClick={handleForgotSubmit}
+    className="w-full text-sm text-purple-600 mt-2 disabled:opacity-50"
+  >
+    {canResend ? "Resend OTP" : `Resend OTP in ${resendTimer}s`}
+  </button>
+</form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

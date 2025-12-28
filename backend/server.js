@@ -12,27 +12,31 @@ import testimonialRoutes from "./routes/Testimonials.js";
 import bookingsRoutes from "./routes/bookings.js";
 import notificationsRoutes from "./routes/notifications.js";
 import tasksRoute from "./routes/tasks.js";
+import emailroutes from "./routes/Email.js";
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 // import adminRoutes from "./routes/admin.js"
 
 dotenv.config();
-const app = express();
+const app = express(); 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+
+
 // ---------- Middleware ----------
 app.use(express.json());
 app.use(bodyParser.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(
   cors({
     origin: [
       "https://fixit-x9f3.onrender.com",
       "http://localhost:5000",
-      "http://localhost:5173"
+      "http://localhost:5173",
+      "https://maxie-postacetabular-novelistically.ngrok-free.dev"
     ],
     credentials: true,
   })
@@ -55,7 +59,11 @@ app.use("/api/testimonials", testimonialRoutes);
 app.use("/api/bookings", bookingsRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/tasks", tasksRoute); // WhatsApp tasks
-// app.use("/api/admin", adminRoutes);
+app.use("/api/email",emailroutes);
+
+console.log("TWILIO_SID:", process.env.TWILIO_SID);
+console.log("TWILIO_AUTH:", process.env.TWILIO_AUTH ? "LOADED" : "MISSING");
+console.log("TWILIO_FROM:", process.env.TWILIO_WHATSAPP_FROM);
 
 
 // ❌ Remove local uploads static because Cloudinary handles final images
@@ -70,3 +78,5 @@ app.get(/^\/(?!api).*/, (req, res) => {
 // ---------- Server Listen ----------
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+

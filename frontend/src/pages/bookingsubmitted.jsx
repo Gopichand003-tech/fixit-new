@@ -1,30 +1,86 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import { CheckCircleIcon, Home } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { CheckCircle, Home, ArrowRight } from "lucide-react";
 
 const BookingSubmitted = () => {
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-green-50 via-teal-50 to-green-50 p-6">
-      
-      <div className="flex items-center justify-center w-24 h-24 rounded-full bg-green-100 shadow-lg mb-6 animate-bounce">
-        <CheckCircleIcon className="w-12 h-12 text-green-600" />
-      </div>
-      
-      <h1 className="text-4xl font-extrabold text-green-700 mb-4 text-center">
-        Booking Submitted!
-      </h1>
-      
-      <p className="text-lg text-gray-700 mb-8 text-center max-w-md">
-        The worker has been notified via WhatsApp. They will contact you shortly.
-      </p>
+  const navigate = useNavigate();
 
-      <Link
-        to="/dashboard"
-        className="flex items-center gap-3 px-8 py-3 bg-white/70 backdrop-blur-md text-green-700 rounded-3xl font-semibold shadow-lg hover:shadow-2xl hover:bg-white transition-all duration-300 transform hover:-translate-y-1 hover:scale-105"
+  return (
+    <div
+      className="
+        min-h-screen flex items-center justify-center
+        bg-gradient-to-br from-green-50 via-teal-50 to-green-100
+        px-4
+      "
+    >
+      {/* Card */}
+      <div
+        className="
+          w-full max-w-md
+          bg-white/80 backdrop-blur-xl
+          rounded-3xl
+          shadow-2xl
+          p-8 sm:p-10
+          text-center
+          ring-1 ring-black/5
+        "
       >
-        <Home className="w-5 h-5" />
-        Back to Dashboard
-      </Link>
+        {/* Success Icon */}
+        <div
+          className="
+            mx-auto mb-6
+            w-20 h-20 sm:w-24 sm:h-24
+            rounded-full
+            bg-green-100
+            flex items-center justify-center
+            shadow-md
+            animate-pulse
+          "
+        >
+          <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-green-600" />
+        </div>
+
+        {/* Title */}
+        <h1 className="text-2xl sm:text-4xl font-extrabold text-green-700 mb-3">
+          Booking Submitted!
+        </h1>
+
+        {/* Description */}
+        <p className="text-sm sm:text-lg text-gray-600 mb-8 leading-relaxed">
+          The worker has been notified via WhatsApp.
+          <br className="hidden sm:block" />
+          They will contact you shortly.
+        </p>
+
+        {/* Back to Dashboard Button */}
+        <button
+          onClick={() => navigate("/dashboard")}
+          className="
+            group
+            w-full sm:w-auto
+            inline-flex items-center justify-center gap-3
+            px-7 py-3
+            rounded-2xl
+            font-semibold text-white
+            bg-gradient-to-r from-green-600 to-teal-600
+            shadow-lg
+            ring-2 ring-green-400/30
+            hover:shadow-2xl hover:ring-green-400/60
+            transition-all duration-300
+            active:scale-95
+          "
+        >
+          <Home className="w-5 h-5" />
+          Back to Dashboard
+          <ArrowRight
+            className="
+              w-5 h-5
+              transition-transform
+              group-hover:translate-x-1
+            "
+          />
+        </button>
+      </div>
     </div>
   );
 };

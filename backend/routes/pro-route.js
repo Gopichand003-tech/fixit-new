@@ -1,44 +1,31 @@
 import express from "express";
 import Provider from "../models/Provider.js";
+import Booking from "../models/booking.js";
 import { uploadProviderFiles } from "../utils/cloudinary.js";
+import { sendWhatsapp } from "../utils/sendWhatsapp.js";
 
 const router = express.Router();
 
-/* ---------------------- Helper ---------------------- */
-const getCloudUrl = (fileArr) =>
-  fileArr?.[0]?.secure_url || fileArr?.[0]?.path || "";
+/* ================= PHONE NORMALIZER ================= */
+const normalizePhone = (phone) => {
+  let clean = phone.replace(/\D/g, "");
+  if (clean.startsWith("0")) clean = clean.slice(1);
+  if (clean.length === 10) clean = "91" + clean;
+  return clean;
+};
 
-/* ---------------------- Routes ---------------------- */
-
-/* 1️⃣ Search providers */
-router.get("/search", async (req, res) => {
-  try {
-    const { location, service } = req.query;
-    const filter = {};
-
-    if (location) filter.location = { $regex: location, $options: "i" };
-    if (service) filter.service = { $regex: service, $options: "i" };
-
-    const providers = await Provider.find(filter);
-    res.json(providers);
-  } catch (err) {
-    console.error("Search Error:", err);
-    res.status(500).json({ message: "Failed to search providers" });
-  }
-});
-
-/* 2️⃣ Get all providers */
+/* ================= GET ALL PROVIDERS ================= */
 router.get("/", async (_req, res) => {
   try {
     const providers = await Provider.find();
     res.json(providers);
-  } catch (err) {
-    console.error("Fetch Error:", err);
+  } catch {
     res.status(500).json({ message: "Failed to fetch providers" });
   }
 });
 
-/* 3️⃣ Register provider */
+
+/* ================= REGISTER PROVIDER ================= */
 router.post(
   "/",
   uploadProviderFiles.fields([
@@ -48,167 +35,178 @@ router.post(
   ]),
   async (req, res) => {
     try {
+      console.log("🔥 PROVIDER API HIT");
       console.log("REQ BODY:", req.body);
-      console.log("FILES:", req.files);
+      console.log("REQ FILES:", req.files);
+
+      const { name, phone, service, experience, location } = req.body;
+
+      // 🛑 HARD STOP — NO MORE VALIDATION ERRORS
+      if (!name || !phone || !service || !experience || !location) {
+        return res.status(400).json({
+          message: "Invalid provider submission",
+          received: req.body,
+        });
+      }
+
+      const exists = await Provider.findOne({ phone });
+      if (exists) {
+        return res.status(409).json({
+          message: "Provider already registered with this phone number",
+        });
+      }
 
       const provider = await Provider.create({
-        name: req.body.name,
-        email: req.body.email,              // ✅ REQUIRED
-        phone: req.body.phone,              // ✅ REQUIRED
-        service: req.body.service,
-        experience: req.body.experience,
-        location: req.body.location,
-
+        name,
+        phone,
+        service,
+        experience,
+        location,
         documents: {
-          photo: getCloudUrl(req.files?.photo),
-          aadhaar: getCloudUrl(req.files?.aadhaar),
-          pancard: getCloudUrl(req.files?.pancard),
+          photo: req.files?.photo?.[0]?.path || "",
+          aadhaar: req.files?.aadhaar?.[0]?.path || "",
+          pancard: req.files?.pancard?.[0]?.path || "",
         },
-
-        emailVerified: true,                 // ✅ since OTP already verified
-        membershipPaid: false,
       });
 
-      res.status(201).json({
-        success: true,
-        message: "Provider registered successfully",
-        provider,
-      });
+      res.status(201).json(provider);
     } catch (err) {
-      console.error("❌ Provider Create Error:", err);
-      res.status(500).json({
-        success: false,
-        message: err.message,
-      });
+      console.error("PROVIDER ERROR:", err); 
+      res.status(500).json({ message: "Server error" });
     }
   }
 );
 
-/* 4️⃣ Update membership */
-router.patch("/:id/membership", async (req, res) => {
-  try {
-    const provider = await Provider.findByIdAndUpdate(
-      req.params.id,
-      { membershipPaid: req.body.membershipPaid },
-      { new: true }
-    );
 
-    if (!provider) {
-      return res.status(404).json({ message: "Provider not found" });
-    }
 
-    res.json({ message: "Membership updated", provider });
-  } catch (err) {
-    console.error("Membership Update Error:", err);
-    res.status(500).json({ message: "Failed to update membership" });
-  }
-});
-
-/* 5️⃣ Delete provider (Admin only) */
-router.delete("/:id", async (req, res) => {
-  try {
-    const isAdmin =
-      req.headers["x-admin-secret"] === process.env.ADMIN_SECRET;
-
-    if (!isAdmin) {
-      return res.status(403).json({ message: "Only admin can delete providers" });
-    }
-
-    const provider = await Provider.findByIdAndDelete(req.params.id);
-
-    if (!provider) {
-      return res.status(404).json({ message: "Provider not found" });
-    }
-
-    res.json({ message: "Provider deleted successfully" });
-  } catch (err) {
-    console.error("Delete Error:", err);
-    res.status(500).json({ message: "Failed to delete provider" });
-  }
-});
-
-// status badge
-router.patch("/:id/heartbeat", async (req, res) => {
-  try {
-    await Provider.findByIdAndUpdate(req.params.id, {
-      lastSeen: new Date(),
-    });
-    res.sendStatus(204);
-  } catch (err) {
-    res.status(500).json({ message: "Heartbeat failed" });
-  }
-});
-
-// Whatsapp webhook
+/* ======================================================
+   WHATSAPP WEBHOOK (ONLINE / OFFLINE + BOOKING ACTIONS)
+====================================================== */
 router.post("/whatsapp", async (req, res) => {
   try {
-    const from = req.body.From;          // whatsapp:+91XXXXXXXXXX
-    const body = req.body.Body?.trim().toUpperCase();
+    const bodyRaw = req.body.Body || "";
+    const body = bodyRaw.trim().toUpperCase();
 
-    const phone = from.replace("whatsapp:", "");
+    const rawFrom = req.body.From || "";
+    const phone = normalizePhone(rawFrom.replace(/\D/g, ""));
 
     const provider = await Provider.findOne({ phone });
-
     if (!provider) {
       return res.send(`
         <Response>
-          <Message>You are not registered as a provider.</Message>
+          <Message>❌ You are not registered as a FixIt provider.</Message>
         </Response>
       `);
     }
 
+    /* ================= ONLINE / OFFLINE ================= */
     if (body === "START") {
-      provider.lastSeen = new Date();
+      provider.isOnline = true;
       await provider.save();
 
       return res.send(`
         <Response>
-          <Message>You are now ONLINE ✅</Message>
+          <Message>🟢 You are ONLINE.
+You will now receive booking requests.</Message>
         </Response>
       `);
     }
 
-    if (body === "STOP") {
-      provider.lastSeen = new Date(0); // force offline
+    if (body === "STOP" || body === "LEAVE") {
+      provider.isOnline = false;
       await provider.save();
 
       return res.send(`
         <Response>
-          <Message>You are now OFFLINE ❌</Message>
+          <Message>🔴 You are OFFLINE.
+You will not receive bookings.</Message>
         </Response>
       `);
     }
 
-    if (body === "STATUS") {
-      const online = provider.isOnline ? "ONLINE ✅" : "OFFLINE ❌";
+    /* ================= ACCEPT / REJECT ================= */
+    if (
+      body === "ACCEPT" ||
+      body === "REJECT" ||
+      body.startsWith("ACCEPT") ||
+      body.startsWith("REJECT")
+    ) {
+      if (!provider.isOnline) {
+        return res.send(`
+          <Response>
+            <Message>🔴 You are OFFLINE.
+Type START to go online.</Message>
+          </Response>
+        `);
+      }
 
+      const [action, bookingId] = body.split(" ");
+
+      const booking = bookingId
+        ? await Booking.findById(bookingId)
+        : await Booking.findOne({
+            workerId: provider._id,
+            status: "request-sent",
+          }).sort({ createdAt: -1 });
+
+      if (!booking) {
+        return res.send(`
+          <Response>
+            <Message>❌ No pending booking found.</Message>
+          </Response>
+        `);
+      }
+
+      if (booking.workerId.toString() !== provider._id.toString()) {
+        return res.send(`
+          <Response>
+            <Message>⛔ This booking is not assigned to you.</Message>
+          </Response>
+        `);
+      }
+
+      booking.status =
+        action === "ACCEPT" ? "worker-accepted" : "worker-rejected";
+      await booking.save();
+
+      //user notify
       return res.send(`
-        <Response>
-          <Message>Your status: ${online}</Message>
-        </Response>
-      `);
+  <Response>
+    <Message>
+✅ Booking ${action}ED successfully.
+
+Thank you for responding promptly.
+You may receive more requests soon 🚀
+    </Message>
+  </Response>
+`);
     }
 
+    /* ================= HELP ================= */
     return res.send(`
       <Response>
         <Message>
 Commands:
 START – Go Online
-STOP – Go Offline
-STATUS – Check status
+STOP / LEAVE – Go Offline
+
+Booking:
+ACCEPT
+REJECT
+or
+ACCEPT &lt;BookingId&gt;
+REJECT &lt;BookingId&gt;
         </Message>
       </Response>
     `);
-
   } catch (err) {
-    console.error(err);
-    res.send(`
+    console.error("WhatsApp webhook error:", err);
+    return res.send(`
       <Response>
-        <Message>Server error. Try again later.</Message>
+        <Message>⚠️ Server error. Try again later.</Message>
       </Response>
     `);
   }
 });
-
 
 export default router;

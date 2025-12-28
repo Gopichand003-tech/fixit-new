@@ -9,18 +9,13 @@ const providerSchema = new mongoose.Schema(
       trim: true,
     },
 
-    email: {
-      type: String,
-      required: true,
-      lowercase: true,
-      trim: true,
-    },
+   phone: {
+  type: String,
+  required: true,
+  unique: true,
+  index: true,
+},
 
-    phone: {
-      type: String,
-      required: true, // ✅ kept ONLY for display / calling
-      trim: true,
-    },
 
     /* ---------------- Service Info ---------------- */
     service: {
@@ -40,32 +35,28 @@ const providerSchema = new mongoose.Schema(
 
     /* ---------------- Documents ---------------- */
     documents: {
-      photo: { type: String },    // Cloudinary URL
-      aadhaar: { type: String },  // Cloudinary URL
-      pancard: { type: String },  // Cloudinary URL
+      photo: String,
+      aadhaar: String,
+      pancard: String,
     },
 
-    /* 🔥 REAL-TIME STATUS */
-    lastSeen: {
-      type: Date,
-      default: Date.now,
-    },
-
-    /* ---------------- Verification & Payment ---------------- */
-    emailVerified: {
+    /* 🔥 ONLINE STATUS (ONLY SOURCE OF TRUTH) */
+    isOnline: {
       type: Boolean,
-      default: false, // ✅ set true after OTP verify
+      default: false,
     },
+
+    
 
     membershipPaid: {
       type: Boolean,
       default: false,
     },
 
-    /* ---------------- Admin Control (optional but recommended) ---------------- */
+    /* ---------------- Admin Control ---------------- */
     approvedByAdmin: {
       type: Boolean,
-      default: true, // set false if manual approval needed
+      default: true,
     },
   },
   {
@@ -73,12 +64,5 @@ const providerSchema = new mongoose.Schema(
   }
 );
 
-/* 🔥 Virtual Online Status (NO DB WRITE) */
-providerSchema.virtual("isOnline").get(function () {
-  const FIVE_MIN = 5 * 60 * 1000;
-  return Date.now() - new Date(this.lastSeen).getTime() < FIVE_MIN;
-});
-
-providerSchema.set("toJSON", { virtuals: true });
-
 export default mongoose.model("Provider", providerSchema);
+

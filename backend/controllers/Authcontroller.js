@@ -4,17 +4,11 @@ dotenv.config();
 import User from '../models/user.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import nodemailer from 'nodemailer';
 import { OAuth2Client } from 'google-auth-library';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 import streamifier from 'streamifier';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
-/* ----------------------------- ENV Checks ----------------------------- */
-if (!process.env.JWT_SECRET) console.warn('⚠️ JWT_SECRET missing');
-if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS)
-  console.warn('⚠️ EMAIL_USER or EMAIL_PASS missing');
 if (!process.env.CLOUDINARY_CLOUD_NAME ||
     !process.env.CLOUDINARY_API_KEY ||
     !process.env.CLOUDINARY_API_SECRET)
@@ -26,6 +20,7 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
 
 /* ------------------------------ Helpers ------------------------------ */
 const signToken = (id, role = 'user') =>
@@ -45,17 +40,6 @@ const publicUser = (req, userDoc) => ({
   profilePic: absoluteUrl(req, userDoc.profilePic),
 });
 
-/* ---------------------------- Mail Transport --------------------------- */
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-    port: 465,
-  secure: true,
-  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-});
-
-transporter.verify()
-  .then(() => console.log('✅ SMTP ready'))
-  .catch(err => console.error('❌ SMTP error:', err.message));
 
 /* ---------------------------- Google Login ---------------------------- */
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -138,58 +122,6 @@ export const userSignin = async (req, res) => {
   }
 };
 
-/* --------------------------- Password Reset --------------------------- */
-export const resetPasswordRequest = async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ message: 'Email is required' });
-
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    user.resetOtp = otp;
-    user.resetOtpExpiry = Date.now() + 10 * 60 * 1000;
-    await user.save();
-
-await transporter.verify();
-console.log('✅ SMTP connection verified');
-
-    await transporter.sendMail({
-      from: `FIX-IT Support <${process.env.EMAIL_USER}>`,
-      to: user.email,
-      subject: 'Your FIX-IT Password Reset OTP',
-      html: `<h2>OTP: ${otp}</h2><p>Expires in 10 minutes.</p>`,
-    });
-    return res.json({ message: 'OTP sent to email' });
-  } catch (err) {
-  console.error('❌ resetPasswordRequest error:', err.message, err.stack);
-  return res.status(500).json({ message: 'Failed to send OTP', error: err.message });
-}
-
-};
-
-export const resetPassword = async (req, res) => {
-  try {
-    const { email, otp, newPassword } = req.body;
-    if (!email || !otp || !newPassword)
-      return res.status(400).json({ message: 'Email, OTP, and new password are required' });
-
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    if (user.resetOtp !== otp || user.resetOtpExpiry < Date.now())
-      return res.status(400).json({ message: 'Invalid or expired OTP' });
-
-    user.password = await bcrypt.hash(newPassword, 10);
-    user.resetOtp = undefined;
-    user.resetOtpExpiry = undefined;
-    await user.save();
-    return res.json({ message: 'Password reset successful' });
-  } catch (err) {
-    console.error('resetPassword error:', err);
-    return res.status(500).json({ message: 'Server error' });
-  }
-};
 
 /* ---------------------------- Update Profile --------------------------- */
 export const updateProfile = async (req, res) => {
